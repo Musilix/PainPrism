@@ -1,12 +1,11 @@
-import { chromium, Browser, Page } from 'playwright';
+import { chromium } from 'playwright';
 import { HackerNewsSource } from './sources/hackernews.source';
-// import { RedditSource } from './sources/reddit.source'; // Example for the future
+import { ScraperSource } from './types';
 
 async function main() {
 	console.log('🚀 Starting The Pain Prism scraper...');
 
-	// Define all the sources we want to scrape. Just hacker news for now
-	const sourcesToScrape = [HackerNewsSource];
+	const sourcesToScrape: ScraperSource[] = [new HackerNewsSource()];
 
 	const browser = await chromium.launch({ headless: true });
 	const context = await browser.newContext({
@@ -38,6 +37,4 @@ async function main() {
 	}
 }
 
-(async () => {
-	await main();
-})();
+main().catch(console.error);

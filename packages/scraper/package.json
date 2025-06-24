@@ -1,15 +1,19 @@
 {
 	"name": "scraper",
 	"version": "1.0.0",
+	"type": "module",
 	"description": "Scrapes and analyzes data for The Pain Prism.",
 	"main": "dist/main.js",
 	"scripts": {
 		"scrape": "ts-node src/main.ts",
 		"build": "tsc",
-		"start": "node dist/main.js"
+		"start": "node dist/main.js",
+		"db:generate": "drizzle-kit generate",
+		"db:migrate": "ts-node src/db/migrate.ts"
 	},
 	"dependencies": {
 		"dotenv": "^16.3.1",
+		"drizzle-orm": "^0.31.2",
 		"node-cron": "^3.0.3",
 		"openai": "^4.20.1",
 		"pg": "^8.11.3",
@@ -19,6 +23,7 @@
 		"@types/node": "^20.10.4",
 		"@types/node-cron": "^3.0.11",
 		"@types/pg": "^8.10.9",
+		"drizzle-kit": "^0.22.7",
 		"ts-node": "^10.9.2",
 		"typescript": "^5.3.3"
 	}
