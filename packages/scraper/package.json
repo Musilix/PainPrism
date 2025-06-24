@@ -9,22 +9,22 @@
 		"build": "tsc",
 		"start": "node dist/main.js",
 		"db:generate": "drizzle-kit generate",
-		"db:migrate": "ts-node src/db/migrate.ts"
+		"db:migrate": "node --loader ts-node/esm src/db/migrate.ts"
 	},
 	"dependencies": {
-		"dotenv": "^16.3.1",
-		"drizzle-orm": "^0.31.2",
+		"dotenv": "^16.5.0",
+		"drizzle-orm": "^0.31.4",
 		"node-cron": "^3.0.3",
-		"openai": "^4.20.1",
-		"pg": "^8.11.3",
-		"playwright": "^1.40.1"
+		"openai": "^4.104.0",
+		"pg": "^8.16.2",
+		"playwright": "^1.53.1"
 	},
 	"devDependencies": {
-		"@types/node": "^20.10.4",
+		"@types/node": "^20.19.1",
 		"@types/node-cron": "^3.0.11",
-		"@types/pg": "^8.10.9",
-		"drizzle-kit": "^0.22.7",
+		"@types/pg": "^8.15.4",
+		"drizzle-kit": "^0.22.8",
 		"ts-node": "^10.9.2",
-		"typescript": "^5.3.3"
+		"typescript": "^5.8.3"
 	}
 }
