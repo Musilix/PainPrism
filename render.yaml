@@ -1,0 +1,16 @@
+# Infrastructure as Code approach to define our Web Service and Cron Job Service
+# Just testing for now...
+services:
+    - type: cron
+      name: painprism-scraper
+      runtime: docker
+      repo: https://github.com/YOUR_USERNAME/YOUR_REPO_NAME # Change this to your repo URL
+      dockerfilePath: ./packages/scraper/Dockerfile
+      schedule: '0 0 * * *' # Example: Run every 24 hours
+      envVars:
+          - key: DATABASE_URL
+            fromDatabase:
+                name: pain-prism-db # The name of your Render Postgres instance
+                property: connectionString
+          - key: NODE_ENV
+            value: production

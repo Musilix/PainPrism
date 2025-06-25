@@ -1,3 +1,4 @@
+# Set up for running a database locally
 version: '3.8'
 services:
     db:
