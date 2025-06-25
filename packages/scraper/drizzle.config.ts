@@ -1,7 +1,5 @@
 import { defineConfig } from 'drizzle-kit';
 import * as dotenv from 'dotenv';
-import * as path from 'path';
-import { fileURLToPath } from 'url';
 
 // Simplified call. It will find the .env in the project root
 // when you run the pnpm command from the root.

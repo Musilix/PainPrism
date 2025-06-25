@@ -23,6 +23,7 @@ export async function insertPost(post: {
 	const { sourceId, sourceUrl, title, author } = post;
 
 	// Check for existing record of a given post
+	// Return postID even if post already exists, because there may be new comments on it that we can scrape
 	const existingPost = await db.query.posts.findFirst({
 		where: (posts) => eq(posts.sourceId, sourceId),
 	});
@@ -31,6 +32,7 @@ export async function insertPost(post: {
 			`   [DB] Post with source_id ${sourceId} already exists. Skipping insertion.`
 		);
 		return existingPost.id;
+		// return null;
 	}
 
 	// Insert new post if no record exists yet
@@ -58,5 +60,52 @@ export async function insertPost(post: {
 			err
 		);
 		return null;
+	}
+}
+
+export async function insertComment(comment: {
+	postId: number;
+	parentSourceId: string | null; // Correctly typed as string | null
+	sourceCommentId: string;
+	author: string;
+	text: string;
+}) {
+	const { postId, parentSourceId, sourceCommentId, author, text } = comment;
+
+	if (
+		await db.query.comments.findFirst({
+			where: (c) => eq(c.sourceCommentId, sourceCommentId),
+		})
+	) {
+		return;
+	}
+
+	let parentDbId: number | null = null;
+	// If there is a parent, find its database ID by looking up its source ID.
+	if (parentSourceId) {
+		const parentComment = await db.query.comments.findFirst({
+			columns: { id: true },
+			where: (c) => eq(c.sourceCommentId, parentSourceId),
+		});
+		if (parentComment) {
+			parentDbId = parentComment.id;
+		}
+	}
+
+	try {
+		await db.insert(schema.comments).values({
+			postId,
+			parentCommentId: parentDbId, // Now correctly uses the looked-up database ID
+			sourceCommentId,
+			author,
+			text,
+		});
+		console.log(
+			`      ---> Stored comment ${sourceCommentId} (Parent: ${
+				parentSourceId || 'None'
+			})`
+		);
+	} catch (err) {
+		console.error(`[DB] Error inserting comment ${sourceCommentId}:`, err);
 	}
 }

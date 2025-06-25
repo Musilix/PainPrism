@@ -7,6 +7,7 @@ import {
 	pgTable,
 	primaryKey,
 	customType,
+	AnyPgColumn,
 } from 'drizzle-orm/pg-core';
 
 // Correctly define the custom type for pgvector for modern Drizzle versions
@@ -26,6 +27,22 @@ export const posts = pgTable('posts', {
 	sourceUrl: varchar('source_url', { length: 2048 }).notNull(),
 	title: text('title').notNull(),
 	author: varchar('author', { length: 255 }),
+	scrapedAt: timestamp('scraped_at', { withTimezone: true }).defaultNow(),
+});
+
+export const comments = pgTable('comments', {
+	id: serial('id').primaryKey(),
+	postId: integer('post_id')
+		.references(() => posts.id, { onDelete: 'cascade' })
+		.notNull(),
+	parentCommentId: integer('parent_comment_id').references(
+		(): AnyPgColumn => comments.id
+	),
+	sourceCommentId: varchar('source_comment_id', { length: 255 })
+		.unique()
+		.notNull(),
+	author: varchar('author', { length: 255 }),
+	text: text('text').notNull(),
 	scrapedAt: timestamp('scraped_at', { withTimezone: true }).defaultNow(),
 });
 

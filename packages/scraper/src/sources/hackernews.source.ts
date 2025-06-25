@@ -1,5 +1,5 @@
 import { Page } from 'playwright';
-import { insertPost } from '../db/queries.js';
+import { insertComment, insertPost } from '../db/queries.js';
 import { ScraperSource } from '../types.js';
 
 const HN_BASE_URL = 'https://news.ycombinator.com/';
@@ -64,8 +64,7 @@ export class HackerNewsSource implements ScraperSource {
 			});
 
 			if (postId) {
-				console.log(`I Grabbed Comments for post ${postId}! teehe jk`);
-				// await this.scrapeComments(page, postId);
+				await this.scrapeComments(page, postId);
 			}
 		} catch (err) {
 			console.error(`      [Error] Failed to process post ${url}:`, err);
@@ -77,20 +76,42 @@ export class HackerNewsSource implements ScraperSource {
 		const commentRows = await page.$$('tr.comtr');
 		console.log(`         Found ${commentRows.length} potential comments.`);
 
+		// This now correctly stores the string-based source ID of the parent.
+		const lineage: (string | null)[] = [];
+
 		for (const commentRow of commentRows) {
-			const commentId = await commentRow.getAttribute('id');
+			const sourceCommentId = await commentRow.getAttribute('id');
+			if (!sourceCommentId) continue;
+
+			const indentWidth = await commentRow.$eval(
+				'img[src="s.gif"]',
+				(img) => parseInt(img.getAttribute('width') || '0')
+			);
+			const indentLevel = indentWidth / 40;
+
+			const author =
+				(await commentRow
+					.$eval('.comhead .hnuser', (el) => el.textContent)
+					.catch(() => 'N/A')) || 'N/A';
 			const commentText = await commentRow
 				.$eval('.commtext', (el) => (el as HTMLElement).innerText)
 				.catch(() => null);
 
-			if (commentId && commentText && commentText.length > 50) {
-				console.log(
-					`---> Comment ${commentId} Grabbed: "${commentText.substring(
-						0,
-						0
-					)}..."`
-				);
-				// AI analysis and insertion logic will go here
+			if (commentText && commentText.length > 50) {
+				// Find the parent's source ID from our lineage tracker.
+				const parentSourceId =
+					indentLevel > 0 ? lineage[indentLevel - 1] : null;
+
+				await insertComment({
+					postId: postId,
+					parentSourceId: parentSourceId, // Pass the string ID
+					sourceCommentId: sourceCommentId,
+					author: author,
+					text: commentText,
+				});
+
+				// Update the lineage tracker with the current comment's source ID for the next iteration.
+				lineage[indentLevel] = sourceCommentId;
 			}
 		}
 	}

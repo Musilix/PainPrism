@@ -5,6 +5,7 @@
 		"frontend": "pnpm --filter frontend",
 		"backend": "pnpm --filter backend-api",
 		"scraper": "pnpm --filter scraper",
+		"setup:scraper": "pnpm --filter scraper db:generate && pnpm --filter scraper db:migrate && pnpm --filter scraper exec playwright install && pnpm --filter scraper scrape",
 		"dev": "pnpm --filter frontend dev"
 	},
 	"devDependencies": {
