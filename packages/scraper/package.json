@@ -5,7 +5,7 @@
 	"description": "Scrapes and analyzes data for The Pain Prism.",
 	"main": "dist/main.js",
 	"scripts": {
-		"scrape": "ts-node src/main.ts",
+		"scrape": "node --loader ts-node/esm src/main.ts",
 		"build": "tsc",
 		"start": "node dist/main.js",
 		"db:generate": "drizzle-kit generate",

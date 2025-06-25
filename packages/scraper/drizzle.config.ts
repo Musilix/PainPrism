@@ -1,8 +1,11 @@
 import { defineConfig } from 'drizzle-kit';
 import * as dotenv from 'dotenv';
 import * as path from 'path';
+import { fileURLToPath } from 'url';
 
-dotenv.config({ path: path.resolve(__dirname, './.env') });
+// Simplified call. It will find the .env in the project root
+// when you run the pnpm command from the root.
+dotenv.config();
 
 if (!process.env.DATABASE_URL) {
 	throw new Error('DATABASE_URL is not set in environment variables');

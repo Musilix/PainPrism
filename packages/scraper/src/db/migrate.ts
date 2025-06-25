@@ -4,7 +4,9 @@ import { Pool } from 'pg';
 import * as dotenv from 'dotenv';
 import * as path from 'path';
 
-dotenv.config({ path: path.resolve(process.cwd(), '.env') });
+// Simplified call. It will find the .env in the project root
+// when you run the pnpm command from the root.
+dotenv.config();
 
 const runMigrations = async () => {
 	if (!process.env.DATABASE_URL) {

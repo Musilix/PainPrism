@@ -1,11 +1,11 @@
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
-import * as schema from './schema';
+import * as schema from './schema.js';
 import * as dotenv from 'dotenv';
-import * as path from 'path';
+import { eq } from 'drizzle-orm';
 
-dotenv.config({ path: path.resolve(__dirname, '../../.env.local') });
-dotenv.config({ path: path.resolve(__dirname, '../../.env') });
+// This will now find the .env file in your project root
+dotenv.config();
 
 const pool = new Pool({
 	connectionString: process.env.DATABASE_URL,
@@ -19,12 +19,13 @@ export async function insertPost(post: {
 	title: string;
 	author: string;
 }) {
+	// Extract important shits
 	const { sourceId, sourceUrl, title, author } = post;
 
+	// Check for existing record of a given post
 	const existingPost = await db.query.posts.findFirst({
-		where: (posts, { eq }) => eq(posts.sourceId, sourceId),
+		where: (posts) => eq(posts.sourceId, sourceId),
 	});
-
 	if (existingPost) {
 		console.log(
 			`   [DB] Post with source_id ${sourceId} already exists. Skipping insertion.`
@@ -32,6 +33,7 @@ export async function insertPost(post: {
 		return existingPost.id;
 	}
 
+	// Insert new post if no record exists yet
 	try {
 		const newPosts = await db
 			.insert(schema.posts)
@@ -47,6 +49,8 @@ export async function insertPost(post: {
 		console.log(
 			`   [DB] Inserted new post with source_id ${sourceId}. DB ID: ${postId}`
 		);
+
+		// Return the PK
 		return postId;
 	} catch (err) {
 		console.error(

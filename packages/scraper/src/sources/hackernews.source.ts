@@ -1,6 +1,6 @@
 import { Page } from 'playwright';
-import { insertPost } from '../db/queries';
-import { ScraperSource } from '../types';
+import { insertPost } from '../db/queries.js';
+import { ScraperSource } from '../types.js';
 
 const HN_BASE_URL = 'https://news.ycombinator.com/';
 const PAGES_TO_SCRAPE_PER_SECTION = 1;
@@ -64,7 +64,8 @@ export class HackerNewsSource implements ScraperSource {
 			});
 
 			if (postId) {
-				await this.scrapeComments(page, postId);
+				console.log(`I Grabbed Comments for post ${postId}! teehe jk`);
+				// await this.scrapeComments(page, postId);
 			}
 		} catch (err) {
 			console.error(`      [Error] Failed to process post ${url}:`, err);
