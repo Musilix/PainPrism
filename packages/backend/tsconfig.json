@@ -17,6 +17,8 @@
 	  "strictBindCallApply": false,
 	  "forceConsistentCasingInFileNames": false,
 	  "noFallthroughCasesInSwitch": false,
+	  
+	  // Lets us reference stuff in scraper - specifically the drizzle schema!
 	  "paths": {
 		"@pain-prism/scraper/*": ["../scraper/src/*"]
 	  }

@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { DrizzleService } from '../drizzle/drizzle.service';
-import { insights } from '../../../scraper/src/db/schema';
+import { insights } from '@pain-prism/scraper/db/schema';
 import { isNotNull } from 'drizzle-orm';
 
 @Injectable()

@@ -8,7 +8,7 @@ import { ConfigModule } from '@nestjs/config';
 @Module({
   imports: [
     ConfigModule.forRoot({
-      isGlobal: true, // Makes .env variables available globally
+      isGlobal: true, // Makes .env variables available globally... mistake? Maybe
     }),
     DrizzleModule,
     InsightsModule,
