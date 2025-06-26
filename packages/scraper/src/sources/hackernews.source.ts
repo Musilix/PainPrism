@@ -1,6 +1,6 @@
 import { Page } from 'playwright';
-import { insertComment, insertPost } from '../db/queries.js';
-import { ScraperSource } from '../types.js';
+import { insertPost } from '../db/queries.js';
+import { ScraperSource, RawComment } from '../types.js';
 
 const HN_BASE_URL = 'https://news.ycombinator.com/';
 const PAGES_TO_SCRAPE_PER_SECTION = 1;
@@ -23,8 +23,9 @@ export class HackerNewsSource implements ScraperSource {
 				const postRows = await page.$$('tr.athing');
 				for (const row of postRows) {
 					const sourceId = await row.getAttribute('id');
-					if (sourceId)
+					if (sourceId) {
 						postUrls.add(`${HN_BASE_URL}item?id=${sourceId}`);
+					}
 				}
 
 				const nextPageLink = await page.$('a.morelink');
@@ -39,7 +40,11 @@ export class HackerNewsSource implements ScraperSource {
 		return postUrls;
 	}
 
-	async processPost(page: Page, url: string): Promise<void> {
+	async processPost(
+		page: Page,
+		url: string,
+		onCommentFound: (comment: RawComment) => Promise<void> // It's now received here
+	): Promise<void> {
 		console.log(`   -> Processing post: ${url}`);
 		try {
 			await page.goto(url, { waitUntil: 'domcontentloaded' });
@@ -63,55 +68,82 @@ export class HackerNewsSource implements ScraperSource {
 				author,
 			});
 
+			// The key step when we process a post is to actually process it's comments!
+			// Technically this scrapeComments fn just grabs the data of comments and sends it
+			// off to our pipeline.service to actually get processed properly
 			if (postId) {
-				await this.scrapeComments(page, postId);
+				await this.scrapeComments(page, postId, onCommentFound);
 			}
 		} catch (err) {
 			console.error(`      [Error] Failed to process post ${url}:`, err);
 		}
 	}
 
-	private async scrapeComments(page: Page, postId: number): Promise<void> {
+	private async scrapeComments(
+		page: Page,
+		postId: number,
+		onCommentFound: (comment: RawComment) => Promise<void> // Received here too
+	): Promise<void> {
 		console.log(`      -> Scraping comments for post ID: ${postId}`);
 		const commentRows = await page.$$('tr.comtr');
 		console.log(`         Found ${commentRows.length} potential comments.`);
 
-		// This now correctly stores the string-based source ID of the parent.
-		const lineage: (string | null)[] = [];
+		const commentLineage: (string | null)[] = [];
 
 		for (const commentRow of commentRows) {
-			const sourceCommentId = await commentRow.getAttribute('id');
-			if (!sourceCommentId) continue;
+			try {
+				const sourceCommentId = await commentRow.getAttribute('id');
+				if (!sourceCommentId) continue;
 
-			const indentWidth = await commentRow.$eval(
-				'img[src="s.gif"]',
-				(img) => parseInt(img.getAttribute('width') || '0')
-			);
-			const indentLevel = indentWidth / 40;
+				// Find indent level of comment and thereby figure out where it stands in a given thread
+				// 1 indent means its a reply, 2 means its a reply to a reply, and so on
+				// This is useful for retrieving the scope of a comment and providing more context to it
+				const indentWidth =
+					(await commentRow.$eval('img[src="s.gif"]', (img) =>
+						parseInt(img.getAttribute('width') || '0')
+					)) || 0;
+				const indentLevel = indentWidth / 40;
 
-			const author =
-				(await commentRow
-					.$eval('.comhead .hnuser', (el) => el.textContent)
-					.catch(() => 'N/A')) || 'N/A';
-			const commentText = await commentRow
-				.$eval('.commtext', (el) => (el as HTMLElement).innerText)
-				.catch(() => null);
+				// Grab comment data
+				const author =
+					(await commentRow
+						.$eval('.comhead .hnuser', (el) => el.textContent)
+						.catch(() => 'N/A')) || 'N/A';
+				const text = await commentRow
+					.$eval('.commtext', (el) => (el as HTMLElement).innerText)
+					.catch(() => null);
 
-			if (commentText && commentText.length > 50) {
-				// Find the parent's source ID from our lineage tracker.
-				const parentSourceId =
-					indentLevel > 0 ? lineage[indentLevel - 1] : null;
+				if (text) {
+					// Set up 3 tier lineage, if possible
+					const parentSourceId =
+						indentLevel > 0
+							? commentLineage[indentLevel - 1]
+							: null;
+					const grandparentSourceId =
+						indentLevel > 1
+							? commentLineage[indentLevel - 2]
+							: null;
 
-				await insertComment({
-					postId: postId,
-					parentSourceId: parentSourceId, // Pass the string ID
-					sourceCommentId: sourceCommentId,
-					author: author,
-					text: commentText,
-				});
+					// Forward the raw data to the orchestrator/ai function.
+					// This class's responsibility ends here.
+					await onCommentFound({
+						postId,
+						sourceCommentId,
+						text,
+						author,
+						parentSourceId,
+						grandparentSourceId,
+					});
 
-				// Update the lineage tracker with the current comment's source ID for the next iteration.
-				lineage[indentLevel] = sourceCommentId;
+					// Update lineage for the next comment in the thread.
+					commentLineage[indentLevel] = sourceCommentId;
+				}
+			} catch (error) {
+				console.error(
+					`      [Error] Failed to process a comment row.`,
+					error
+				);
+				continue; // Continue to the next comment
 			}
 		}
 	}

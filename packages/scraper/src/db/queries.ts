@@ -1,6 +1,7 @@
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
 import * as schema from './schema.js';
+import { insights } from './schema.js';
 import * as dotenv from 'dotenv';
 import { eq } from 'drizzle-orm';
 
@@ -12,6 +13,7 @@ const pool = new Pool({
 });
 
 const db = drizzle(pool, { schema });
+type NewInsight = typeof insights.$inferInsert;
 
 export async function insertPost(post: {
 	sourceId: string;
@@ -19,11 +21,8 @@ export async function insertPost(post: {
 	title: string;
 	author: string;
 }) {
-	// Extract important shits
 	const { sourceId, sourceUrl, title, author } = post;
 
-	// Check for existing record of a given post
-	// Return postID even if post already exists, because there may be new comments on it that we can scrape
 	const existingPost = await db.query.posts.findFirst({
 		where: (posts) => eq(posts.sourceId, sourceId),
 	});
@@ -32,10 +31,8 @@ export async function insertPost(post: {
 			`   [DB] Post with source_id ${sourceId} already exists. Skipping insertion.`
 		);
 		return existingPost.id;
-		// return null;
 	}
 
-	// Insert new post if no record exists yet
 	try {
 		const newPosts = await db
 			.insert(schema.posts)
@@ -51,8 +48,6 @@ export async function insertPost(post: {
 		console.log(
 			`   [DB] Inserted new post with source_id ${sourceId}. DB ID: ${postId}`
 		);
-
-		// Return the PK
 		return postId;
 	} catch (err) {
 		console.error(
@@ -65,7 +60,7 @@ export async function insertPost(post: {
 
 export async function insertComment(comment: {
 	postId: number;
-	parentSourceId: string | null; // Correctly typed as string | null
+	parentSourceId: string | null;
 	sourceCommentId: string;
 	author: string;
 	text: string;
@@ -81,7 +76,6 @@ export async function insertComment(comment: {
 	}
 
 	let parentDbId: number | null = null;
-	// If there is a parent, find its database ID by looking up its source ID.
 	if (parentSourceId) {
 		const parentComment = await db.query.comments.findFirst({
 			columns: { id: true },
@@ -95,7 +89,7 @@ export async function insertComment(comment: {
 	try {
 		await db.insert(schema.comments).values({
 			postId,
-			parentCommentId: parentDbId, // Now correctly uses the looked-up database ID
+			parentCommentId: parentDbId,
 			sourceCommentId,
 			author,
 			text,
@@ -107,5 +101,41 @@ export async function insertComment(comment: {
 		);
 	} catch (err) {
 		console.error(`[DB] Error inserting comment ${sourceCommentId}:`, err);
+	}
+}
+
+export async function findInsightBySourceCommentId(sourceCommentId: string) {
+	try {
+		const insight = await db.query.insights.findFirst({
+			where: (insights) => eq(insights.sourceCommentId, sourceCommentId),
+		});
+		return insight;
+	} catch (err) {
+		console.error(
+			`[DB] Error finding insight for sourceCommentId ${sourceCommentId}:`,
+			err
+		);
+		return { failed: true };
+	}
+}
+
+export async function insertInsight(insightData: NewInsight) {
+	try {
+		const [newInsight] = await db
+			.insert(insights)
+			.values(insightData)
+			.returning();
+
+		console.log(
+			`      ✅ [DB] Inserted new insight for comment ${insightData.sourceCommentId}.`
+		);
+
+		return newInsight;
+	} catch (err) {
+		console.error(
+			`[DB] Error inserting insight for comment ${insightData.sourceCommentId}:`,
+			err
+		);
+		return null;
 	}
 }

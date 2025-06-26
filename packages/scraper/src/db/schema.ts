@@ -54,8 +54,8 @@ export const insights = pgTable('insights', {
 	sourceCommentId: varchar('source_comment_id', { length: 255 })
 		.unique()
 		.notNull(),
-	type: varchar('type', { length: 50 }).notNull(),
-	textSummary: text('text_summary').notNull(),
+	type: varchar('type', { length: 50 }),
+	textSummary: text('text_summary'),
 	tags: text('tags').array(),
 	embedding: vector('embedding', { dimensions: 384 }),
 	createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
