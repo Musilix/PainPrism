@@ -15,6 +15,7 @@ export interface InsightAnalysisResult {
 	subject_name: string | null;
 	subject_description: string | null;
 	audience_type: string | null;
+	market_potential: string | null; // Our new field
 	insight_type: 'pain-point' | 'product-yearning' | null;
 	summary: string | null;
 	tags: string[] | null;
@@ -29,19 +30,22 @@ interface CommentContext {
 }
 
 const systemPrompt = `
-	You are an expert market research analyst. Your job is to dissect a Hacker News comment to find actionable insights. You will be given the original post's title and content, as well as a comment thread.
-	
+	You are an expert market research analyst with a strong sense for viable startup ideas. Your job is to dissect a user comment to find actionable insights that a founder could realistically build a business around. You will be given the original post's title and content, as well as a comment thread.
+		
 	**Your Process:**
 	1.  **Identify the Subject:** First, determine the specific product, company, or technology that the **target_comment** is about. Prioritize the context from the parent/grandparent comments. If they mention a specific subject (e.g., "Duolingo"), use that, even if the main post is about something else. The **post_title** and **post_content** are your fallbacks for context.
 	2.  **Describe the Subject:** Briefly describe the identified subject in a few words (e.g., "an AI language tutor", "a vector database").
-	3.  **Analyze the Target Comment:** Based on this context, analyze the **target_comment** for a specific pain point or product yearning.
-	4.  **Be Specific & Self-Contained:** Your final summary must be understandable to someone who has NOT read the original post. It should incorporate the subject's name and description.
-	
+	3.  **Classify the Audience:** Determine the primary audience for this insight.
+	4.  **Evaluate Market Potential:** Assess if the pain point or yearning represents a solvable problem with a reasonably broad market. A problem with an existing, heavily-entrenched monopoly or a problem that only affects a handful of kernel developers is NOT a high-potential opportunity.
+	5.  **Analyze the Target Comment:** Based on this context, analyze the **target_comment** for a specific pain point or product yearning.
+	6.  **Be Specific & Self-Contained:** Your final summary must be understandable to someone who has NOT read the original post. It should incorporate the subject's name and description.
+
 	**Guiding Principles:**
 	- Your analysis is ALWAYS about the **target_comment**.
-	- Ignore generic complaints. Find specific, actionable insights.
+	- **Prioritize Actionability:** Focus on problems that a new product or service could tangibly solve. A complaint about a fundamental law of physics or a political system is not an actionable insight.
+	- **Filter for Viability:** Ignore insights that are hyper-niche (e.g., a bug in a 20-year-old library) or address markets dominated by a near-monopoly (e.g., a slightly better search engine than Google).
 	- You MUST only use tags and audience types from the provided lists.
-
+	
 	**Output Specification (Tool Calling):**
 	You **MUST** respond with a single function call to \`record_insight\`.
 `;
@@ -60,7 +64,12 @@ const analysisTool = (allowedTags: string[], allowedAudiences: readonly string[]
 				audience_type: {
 					type: 'string',
 					enum: [...allowedAudiences],
-					description: `The primary target audience for this insight. Must be one of: ${allowedAudiences.join(', ')}`,
+					description: `The primary target audience for this insight.`,
+				},
+				market_potential: {
+					type: 'string',
+					enum: ['high', 'medium', 'low'],
+					description: "The estimated potential for a startup to solve this problem. 'High' for broad, unmet needs. 'Low' for hyper-niche or unsolvable problems.",
 				},
 				insight_type: { type: 'string', enum: ['pain-point', 'product-yearning'] },
 				summary: { type: 'string', description: 'A concise, self-contained summary of the core insight that includes the subject name.' },
@@ -110,6 +119,7 @@ export async function analyzeComment(
 			subject_name: args.subject_name ?? null,
 			subject_description: args.subject_description ?? null,
 			audience_type: args.audience_type ?? null,
+			market_potential: args.market_potential ?? null,
 			insight_type: args.insight_type ?? null,
 			summary: args.summary ?? null,
 			tags: args.tags ?? null,
