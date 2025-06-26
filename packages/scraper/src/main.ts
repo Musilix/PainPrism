@@ -8,6 +8,7 @@ async function main() {
 
 	const browser = await chromium.launch({ headless: false });
 	const context = await browser.newContext({
+		// TODO - add this back
 		/* ... */
 	});
 	const page = await context.newPage();
