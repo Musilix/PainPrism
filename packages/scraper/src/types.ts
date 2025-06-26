@@ -28,3 +28,22 @@ export interface RawComment {
 	post_title: string;
 	post_content: string;
 }
+
+export interface InsightAnalysisResult {
+	contains_insight: boolean;
+	subject_name: string | null;
+	subject_description: string | null;
+	audience_type: string | null;
+	market_potential: string | null; 
+	insight_type: 'pain-point' | 'product-yearning' | null;
+	summary: string | null;
+	tags: string[] | null;
+}
+
+export interface CommentContext {
+	post_title: string;
+	post_content: string;
+	grandparent_comment: string | null;
+	parent_comment: string | null;
+	target_comment: string;
+}

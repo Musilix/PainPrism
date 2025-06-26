@@ -48,14 +48,11 @@ export class CommentProcessingService {
 		// 2. Check if already analyzed for insight
 		if (await findInsightBySourceCommentId(comment.sourceCommentId)) return;
 		// 3. Keyword pre-filter - only pass comments that "look" sentiment heavy to the AI
-
 		if (!this.passesKeywordCheck(comment.text)) return;
+		
+		console.log(`[Analyze] Potential insight in ${comment.sourceCommentId}. Running analysis...`);
 
-		console.log(
-			`[Analyze] Potential insight in ${comment.sourceCommentId}. Running analysis...`
-		);
-
-// 4. If we got through the checks, get context (posts title and conent + comment hierarchy if it exists) and analyze
+		// 4. If we got through the checks, get context (posts title and conent + comment hierarchy if it exists) and analyze
 		const analysisResult = await analyzeComment({
 			post_title: comment.post_title,
 			post_content: comment.post_content,
@@ -70,25 +67,24 @@ export class CommentProcessingService {
 
 		if (analysisResult) {
 			if (analysisResult.contains_insight && analysisResult.summary) {
-				// A valuable insight was found. Create an embedding for it!
 				console.log(
 					`Insight found in ${comment.sourceCommentId}! Processing...`
 				);
 				console.log('AI Analysis Result:', analysisResult);
-
-				const embeddingVector = await createEmbedding(
-					analysisResult.summary
-				);
+				
+				const embeddingVector = await createEmbedding(analysisResult.summary);
 				if (embeddingVector) {
 					await insertInsight({
 						postId: comment.postId,
 						sourceCommentId: comment.sourceCommentId,
 						type: analysisResult.insight_type!,
+						subject_name: analysisResult.subject_name,
+						subject_description: analysisResult.subject_description,
+						audience_type: analysisResult.audience_type,
+						market_potential: analysisResult.market_potential,
 						textSummary: analysisResult.summary,
 						tags: analysisResult.tags,
 						embedding: embeddingVector,
-						subject_name: analysisResult.subject_name,
-						subject_description: analysisResult.subject_description,
 					});
 				}
 			} else {
@@ -103,6 +99,10 @@ export class CommentProcessingService {
 					postId: comment.postId,
 					sourceCommentId: comment.sourceCommentId,
 					type: null,
+					subject_name: null,
+					subject_description: null,
+					audience_type: null,
+					market_potential: null,
 					textSummary: null,
 					tags: null,
 					embedding: null,

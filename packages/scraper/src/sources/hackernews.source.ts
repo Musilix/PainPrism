@@ -65,7 +65,8 @@ export class HackerNewsSource implements ScraperSource {
 				(await page
 					.$eval('td.subtext a.hnuser', (el) => el.textContent)
 					.catch(() => 'N/A')) || 'N/A';
-
+	
+			// Keep a record in the db to know we've looked at this post before
 			const postId = await insertPost({
 				sourceId,
 				sourceUrl: url,
@@ -138,7 +139,7 @@ export class HackerNewsSource implements ScraperSource {
 							? commentLineage[indentLevel - 2]
 							: null;
 
-					// Forward the raw data to the orchestrator/ai function.
+					// Forward the raw data to the orchestrator/pipeline function.
 					// This class's responsibility ends here.
 					await onCommentFound({
 						postId,

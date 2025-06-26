@@ -1,3 +1,4 @@
+import { CommentContext, InsightAnalysisResult } from './../types.js';
 import OpenAI from 'openai';
 import * as dotenv from 'dotenv';
 import { ALLOWED_TAGS, AUDIENCE_TYPES } from '../constants.js';
@@ -9,26 +10,6 @@ if (!process.env.OPENAI_API_KEY) {
 }
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-
-export interface InsightAnalysisResult {
-	contains_insight: boolean;
-	subject_name: string | null;
-	subject_description: string | null;
-	audience_type: string | null;
-	market_potential: string | null; // Our new field
-	insight_type: 'pain-point' | 'product-yearning' | null;
-	summary: string | null;
-	tags: string[] | null;
-}
-
-interface CommentContext {
-	post_title: string;
-	post_content: string;
-	grandparent_comment: string | null;
-	parent_comment: string | null;
-	target_comment: string;
-}
-
 const systemPrompt = `
 	You are an expert market research analyst with a strong sense for viable startup ideas. Your job is to dissect a user comment to find actionable insights that a founder could realistically build a business around. You will be given the original post's title and content, as well as a comment thread.
 		
@@ -104,16 +85,15 @@ export async function analyzeComment(
 			tools: [tool],
 			tool_choice: { type: 'function', function: { name: 'record_insight' } },
 		});
-
+		
 		const toolCall = chatCompletion.choices[0]?.message?.tool_calls?.[0];
-
 		if (!toolCall || toolCall.function.name !== 'record_insight') {
 			console.error('[Analysis] Invalid tool call received from API.');
 			return null;
 		}
 
 		const args = JSON.parse(toolCall.function.arguments);
-
+		
 		const analysisResult: InsightAnalysisResult = {
 			contains_insight: args.contains_insight ?? false,
 			subject_name: args.subject_name ?? null,
