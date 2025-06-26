@@ -10,6 +10,7 @@ import {
 	AnyPgColumn,
 } from 'drizzle-orm/pg-core';
 
+// ... vector function ...
 const vector = (name: string, { dimensions }: { dimensions: number }) =>
 	customType<{ data: number[]; driverData: string }>({
 		dataType() {
@@ -21,6 +22,7 @@ const vector = (name: string, { dimensions }: { dimensions: number }) =>
 	})(name);
 
 export const posts = pgTable('posts', {
+    // ... no changes here
 	id: serial('id').primaryKey(),
 	sourceId: varchar('source_id', { length: 255 }).unique().notNull(),
 	sourceUrl: varchar('source_url', { length: 2048 }).notNull(),
@@ -31,6 +33,7 @@ export const posts = pgTable('posts', {
 });
 
 export const comments = pgTable('comments', {
+    // ... no changes here
 	id: serial('id').primaryKey(),
 	postId: integer('post_id')
 		.references(() => posts.id, { onDelete: 'cascade' })
@@ -57,12 +60,17 @@ export const insights = pgTable('insights', {
 	type: varchar('type', { length: 50 }),
 	subject_name: varchar('subject_name', { length: 255 }),
 	subject_description: text('subject_description'),
+	audience_type: varchar('audience_type', { length: 50 }),
+    // --- ADDED ---
+    // The new column to store our market potential classification.
+	market_potential: varchar('market_potential', { length: 50 }),
 	textSummary: text('text_summary'),
 	tags: text('tags').array(),
 	embedding: vector('embedding', { dimensions: 1536 }),
 	createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
 });
 
+// ... rest of schema
 export const clusters = pgTable('clusters', {
 	id: serial('id').primaryKey(),
 	representativeText: text('representative_text').notNull(),
