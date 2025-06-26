@@ -10,7 +10,6 @@ import {
 	AnyPgColumn,
 } from 'drizzle-orm/pg-core';
 
-// Correctly define the custom type for pgvector for modern Drizzle versions
 const vector = (name: string, { dimensions }: { dimensions: number }) =>
 	customType<{ data: number[]; driverData: string }>({
 		dataType() {
@@ -26,6 +25,7 @@ export const posts = pgTable('posts', {
 	sourceId: varchar('source_id', { length: 255 }).unique().notNull(),
 	sourceUrl: varchar('source_url', { length: 2048 }).notNull(),
 	title: text('title').notNull(),
+	post_content: text('post_content'),
 	author: varchar('author', { length: 255 }),
 	scrapedAt: timestamp('scraped_at', { withTimezone: true }).defaultNow(),
 });
@@ -55,9 +55,11 @@ export const insights = pgTable('insights', {
 		.unique()
 		.notNull(),
 	type: varchar('type', { length: 50 }),
+	subject_name: varchar('subject_name', { length: 255 }),
+	subject_description: text('subject_description'),
 	textSummary: text('text_summary'),
 	tags: text('tags').array(),
-	embedding: vector('embedding', { dimensions: 384 }),
+	embedding: vector('embedding', { dimensions: 1536 }),
 	createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
 });
 

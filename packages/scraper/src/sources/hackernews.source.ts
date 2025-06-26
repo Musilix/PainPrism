@@ -52,10 +52,15 @@ export class HackerNewsSource implements ScraperSource {
 			const sourceId = url.split('id=')[1];
 			if (!sourceId) return;
 
+			// Grab post details - Title, Content, Author
 			const title =
 				(await page
 					.$eval('tr.athing .titleline > a', (el) => el.textContent)
 					.catch(() => 'N/A')) || 'N/A';
+			const contentElement = await page.$('.fatitem .commtext');
+			const content = contentElement
+				? await contentElement.innerText()
+				: '';
 			const author =
 				(await page
 					.$eval('td.subtext a.hnuser', (el) => el.textContent)
@@ -65,6 +70,7 @@ export class HackerNewsSource implements ScraperSource {
 				sourceId,
 				sourceUrl: url,
 				title,
+				post_content: content,
 				author,
 			});
 
@@ -72,7 +78,13 @@ export class HackerNewsSource implements ScraperSource {
 			// Technically this scrapeComments fn just grabs the data of comments and sends it
 			// off to our pipeline.service to actually get processed properly
 			if (postId) {
-				await this.scrapeComments(page, postId, onCommentFound);
+				await this.scrapeComments(
+					page,
+					postId,
+					title,
+					content,
+					onCommentFound
+				);
 			}
 		} catch (err) {
 			console.error(`      [Error] Failed to process post ${url}:`, err);
@@ -82,6 +94,8 @@ export class HackerNewsSource implements ScraperSource {
 	private async scrapeComments(
 		page: Page,
 		postId: number,
+		postTitle: string,
+		postContent: string,
 		onCommentFound: (comment: RawComment) => Promise<void> // Received here too
 	): Promise<void> {
 		console.log(`      -> Scraping comments for post ID: ${postId}`);
@@ -133,6 +147,8 @@ export class HackerNewsSource implements ScraperSource {
 						author,
 						parentSourceId,
 						grandparentSourceId,
+						post_title: postTitle,
+						post_content: postContent,
 					});
 
 					// Update lineage for the next comment in the thread.

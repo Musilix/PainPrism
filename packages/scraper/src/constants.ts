@@ -2,13 +2,9 @@
  * This file contains constant values used across the scraper service,
  * primarily for the analysis pipeline. Centralizing them here makes
  * them easier to manage and modify without changing application logic.
- *
- * v3: The definitive, comprehensive list for the MVP.
- * This list is intentionally broad to maximize insight capture.
  */
 
 // --- Keyword Pre-filtering List ---
-
 const PAIN_POINT_KEYWORDS = [
 	// --- Direct Frustration & Strong Emotion ---
 	'frustrating',
@@ -204,3 +200,104 @@ const PRODUCT_YEARNING_KEYWORDS = [
 export const INSIGHT_KEYWORDS = [
 	...new Set([...PAIN_POINT_KEYWORDS, ...PRODUCT_YEARNING_KEYWORDS]),
 ];
+
+// --- Tag Standardization ---
+// A canonical list of allowed tags to ensure consistency.
+export const ALLOWED_TAGS = [
+	// High-Level Categories
+	'saas',
+	'ai',
+	'developer tool',
+	'open source',
+	'api',
+	'mobile app',
+	'web app',
+	'e-commerce',
+	'fintech',
+	'healthtech',
+	'edtech',
+	'gamedev',
+
+	// Technical Concepts
+	'database',
+	'backend',
+	'frontend',
+	'devops',
+	'ci/cd',
+	'testing',
+	'security',
+	'authentication',
+	'cloud',
+	'hosting',
+	'performance',
+	'documentation',
+	'local development',
+	'networking',
+	'cli',
+
+	// Business & Workflow
+	'productivity',
+	'project management',
+	'marketing',
+	'sales',
+	'hiring',
+	'communication',
+	'collaboration',
+	'customer support',
+	'analytics',
+
+	// User Experience
+	'ux',
+	'ui',
+	'design',
+	'onboarding',
+	'accessibility',
+
+	// Data & ML
+	'data science',
+	'machine learning',
+	'data engineering',
+	'data visualization',
+	'ETL',
+	'llm',
+	'vector database',
+
+	// Hardware & Manufacturing
+	'iot',
+	'robotics',
+	'3d printing',
+	'hardware',
+	'manufacturing',
+	'embedded systems',
+
+	// Niche & Emerging Tech
+	'aerospace',
+	'blockchain',
+	'crypto',
+	'vr',
+	'ar',
+	'quantum computing',
+	'bio-tech',
+	'clean-tech',
+];
+
+// --- Audience Type Standardization ---
+// This is the single source of truth for audience classification.
+export const AUDIENCE_TYPES = [
+	// Broad consumer-facing products and services.
+	'general_consumer',
+	// Tools and services for SMBs, startups, and solo entrepreneurs.
+	'small_business',
+	// For designers, artists, writers, musicians, videographers.
+	'creative_professional',
+	// For large organizations; topics include scaling, compliance, enterprise software.
+	'enterprise',
+	// For developers, sysadmins, and engineers with deep technical needs.
+	'niche_technical',
+    // ADDED: For academics, scientists, and university researchers.
+    'academic_researcher',
+    // ADDED: For students and self-learners.
+    'student_learner',
+    // ADDED: For people in government, non-profits, and civic tech.
+    'government_public_sector',
+]

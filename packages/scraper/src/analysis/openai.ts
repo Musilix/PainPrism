@@ -1,5 +1,6 @@
 import OpenAI from 'openai';
 import * as dotenv from 'dotenv';
+import { ALLOWED_TAGS } from '../constants.js';
 
 dotenv.config();
 
@@ -11,92 +12,95 @@ const openai = new OpenAI({
 	apiKey: process.env.OPENAI_API_KEY,
 });
 
-// This is the structured data we expect back from the model.
-// It will be used to create a NewInsight in queries.ts
 export interface InsightAnalysisResult {
 	contains_insight: boolean;
+	subject_name: string | null;
+	subject_description: string | null;
 	insight_type: 'pain-point' | 'product-yearning' | null;
 	summary: string | null;
 	tags: string[] | null;
 }
 
-// This is the context the function will receive
+// The context now includes the full post content for better subject identification.
 interface CommentContext {
+	post_title: string;
+	post_content: string;
 	grandparent_comment: string | null;
 	parent_comment: string | null;
 	target_comment: string;
 }
 
 const systemPrompt = `
-	You are an expert market research analyst specializing in identifying user pain points and product yearnings from online conversations. Your task is to analyze a comment from Hacker News within the context of its parent and grandparent comments. Your goal is to determine if the **target comment** contains a genuine insight and, if so, to extract and structure that insight.
+	You are an expert market research analyst. Your job is to dissect a Hacker News comment to find actionable insights. You will be given the original post's title and content, as well as a comment thread.
 	
-	**Your Guiding Principles:**
-	1.  **Focus on the Target:** Your analysis must be about the **[TARGET]** comment. The **[PARENT]** and **[GRANDPARENT]** comments are for context only. They help you understand sarcasm, nuance, and the topic of discussion.
-	2.  **Identify Actionable Insights:** Do not extract generic complaints or simple agreement/disagreement. Look for specific problems users are facing or concrete features/products they wish existed.
-	3.  **Be Immune to Noise:** Ignore spam, off-topic conversations, and comments that provide no real substance. If the target comment is noise, you must indicate that.
-	4.  **Detect Nuance:** Be highly critical of short, generic phrases like "I agree" or "This is great." Unless the context makes it crystal clear they are endorsing a specific pain point or yearning, classify them as noise. Be on the lookout for sarcasm and irony.
+	**Your Process:**
+	1.  **Identify the Subject:** First, determine the specific product, company, or technology that the **target_comment** is about. Prioritize the context from the parent/grandparent comments. If they mention a specific subject (e.g., "Duolingo"), use that, even if the main post is about something else. The **post_title** and **post_content** are your fallbacks for context.
+	2.  **Describe the Subject:** Briefly describe the identified subject in a few words (e.g., "an AI language tutor", "a vector database").
+	3.  **Analyze the Target Comment:** Based on this context, analyze the **target_comment** for a specific pain point or product yearning.
+	4.  **Be Specific & Self-Contained:** Your final summary must be understandable to someone who has NOT read the original post. It should incorporate the subject's name and description.
 	
-	**Input Format:**
-	You will receive a JSON object containing the conversation thread:
-	{
-	  "grandparent_comment": "Text of the grandparent comment, or null if not applicable.",
-	  "parent_comment": "Text of the parent comment, or null if not applicable.",
-	  "target_comment": "The text of the comment to be analyzed."
-	}
+	**Guiding Principles:**
+	- Your analysis is ALWAYS about the **target_comment**.
+	- Ignore generic complaints. Find specific, actionable insights.
+	- You MUST only use tags from the provided list.
 	
 	**Output Specification (Tool Calling):**
 	You **MUST** respond with a single function call to \`record_insight\`.
 `;
 
-const analysisTool = {
-	type: 'function',
-	function: {
-		name: 'record_insight',
-		description: 'Records the analysis of a target comment.',
-		parameters: {
-			type: 'object',
-			properties: {
-				contains_insight: {
-					type: 'boolean',
-					description:
-						'Set to true only if the target_comment contains a specific, actionable pain point or product yearning. Otherwise, set to false.',
-				},
-				insight_type: {
-					type: 'string',
-					enum: ['pain-point', 'product-yearning'],
-					description:
-						'Required if contains_insight is true. The type of insight found.',
-				},
-				summary: {
-					type: 'string',
-					description:
-						'Required if contains_insight is true. A concise, one-sentence summary of the core insight, rewritten in the third person.',
-				},
-				tags: {
-					type: 'array',
-					items: {
-						type: 'string',
+const analysisTool = (allowedTags: string[]) =>
+	({
+		type: 'function',
+		function: {
+			name: 'record_insight',
+			description: 'Records the analysis of a target comment.',
+			parameters: {
+				type: 'object',
+				properties: {
+					contains_insight: {
+						type: 'boolean',
+						description:
+							'Set to true only if the comment contains an actionable insight.',
 					},
-					description:
-						'Required if contains_insight is true. An array of 3-5 relevant lowercase tags that categorize the insight.',
+					subject_name: {
+						type: 'string',
+						description:
+							'The specific name of the product or technology being discussed (e.g., "Issen", "Duolingo").',
+					},
+					subject_description: {
+						type: 'string',
+						description:
+							'A brief, generic description of the subject (e.g., "an AI language tutor").',
+					},
+					insight_type: {
+						type: 'string',
+						enum: ['pain-point', 'product-yearning'],
+					},
+					summary: {
+						type: 'string',
+						description:
+							'A concise, self-contained summary of the core insight that includes the subject name.',
+					},
+					tags: {
+						type: 'array',
+						items: { type: 'string' },
+						description: `An array of 3-5 relevant lowercase tags from the following list: ${allowedTags.join(
+							', '
+						)}`,
+					},
 				},
+				required: ['contains_insight'],
 			},
-			required: ['contains_insight'],
 		},
-	},
-} as const; // Using 'as const' for stronger type inference
+	} as const);
 
-/**
- * Analyzes a comment thread to extract a potential insight using the OpenAI API.
- * @param context - An object containing the text of the target comment and its ancestors.
- * @returns An InsightAnalysisResult object, or null if an error occurs.
- */
 export async function analyzeComment(
 	context: CommentContext
 ): Promise<InsightAnalysisResult | null> {
 	try {
+		const tool = analysisTool(ALLOWED_TAGS);
 		const chatCompletion = await openai.chat.completions.create({
-			model: 'o4-mini', //Expensive as shite
+			model: 'o4-mini',
 			messages: [
 				{
 					role: 'system',
@@ -104,10 +108,10 @@ export async function analyzeComment(
 				},
 				{
 					role: 'user',
-					content: JSON.stringify(context),
+					content: JSON.stringify(context, null, 2),
 				},
 			],
-			tools: [analysisTool],
+			tools: [tool],
 			tool_choice: {
 				type: 'function',
 				function: { name: 'record_insight' },
@@ -123,9 +127,10 @@ export async function analyzeComment(
 
 		const args = JSON.parse(toolCall.function.arguments);
 
-		// Basic validation to ensure the parsed object matches our expected structure.
 		const analysisResult: InsightAnalysisResult = {
 			contains_insight: args.contains_insight ?? false,
+			subject_name: args.subject_name ?? null,
+			subject_description: args.subject_description ?? null,
 			insight_type: args.insight_type ?? null,
 			summary: args.summary ?? null,
 			tags: args.tags ?? null,
@@ -134,20 +139,15 @@ export async function analyzeComment(
 		return analysisResult;
 	} catch (error) {
 		console.error('[Analysis] Error calling OpenAI API:', error);
-		// Return null to indicate failure so the pipeline can continue.
 		return null;
 	}
 }
 
-/**
- * Creates a vector embedding for a given text using OpenAI's API.
- * @param text - The text to embed.
- * @returns A promise that resolves to an array of numbers (the vector) or null on failure.
- */
 export async function createEmbedding(text: string): Promise<number[] | null> {
+	// ... (no changes here)
 	try {
 		const response = await openai.embeddings.create({
-			model: 'text-embedding-3-small', // Cost-effective and powerful
+			model: 'text-embedding-3-small',
 			input: text,
 		});
 		return response.data[0].embedding;

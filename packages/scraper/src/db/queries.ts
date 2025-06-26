@@ -19,13 +19,14 @@ export async function insertPost(post: {
 	sourceId: string;
 	sourceUrl: string;
 	title: string;
+	post_content: string | null;
 	author: string;
 }) {
-	const { sourceId, sourceUrl, title, author } = post;
-
+	const { sourceId, sourceUrl, title, post_content, author } = post;
 	const existingPost = await db.query.posts.findFirst({
 		where: (posts) => eq(posts.sourceId, sourceId),
 	});
+
 	if (existingPost) {
 		console.log(
 			`   [DB] Post with source_id ${sourceId} already exists. Skipping insertion.`
@@ -40,6 +41,7 @@ export async function insertPost(post: {
 				sourceId,
 				sourceUrl,
 				title,
+				post_content,
 				author,
 			})
 			.returning({ id: schema.posts.id });

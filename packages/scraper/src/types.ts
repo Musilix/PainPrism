@@ -16,6 +16,7 @@ export interface ScraperSource {
 
 /**
  * The standardized "shipping container" for a comment scraped from any source.
+ * This object includes the context from the original post.
  */
 export interface RawComment {
 	postId: number;
@@ -24,4 +25,6 @@ export interface RawComment {
 	author: string;
 	parentSourceId: string | null;
 	grandparentSourceId: string | null;
+	post_title: string;
+	post_content: string;
 }
