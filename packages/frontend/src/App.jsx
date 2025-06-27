@@ -1,25 +1,34 @@
 import React from 'react';
-import Header from './components/Header';
-import Footer from './components/Footer';
-import FilterControls from './components/FilterControls';
-import InsightsGrid from './components/InsightsGrid';
-import { useInsights } from './hooks/useInsights';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import Layout from './components/Layout';
+import HomePage from './pages/HomePage';
+import LoginPage from './pages/LoginPage';
+import RegisterPage from './pages/RegisterPage';
+import NotFoundPage from './pages/NotFoundPage';
 
 export default function App() {
-	const { filteredInsights, filters, setFilters, allTags } = useInsights();
-
 	return (
-		<div className='min-h-screen bg-stone-50 font-sans text-stone-800'>
-			<main className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12'>
-				<Header />
-				<FilterControls
-					filters={filters}
-					setFilters={setFilters}
-					allTags={allTags}
-				/>
-				<InsightsGrid insights={filteredInsights} />
-			</main>
-			<Footer />
-		</div>
+		<Router>
+			<Layout>
+				<Routes>
+					<Route
+						path='/'
+						element={<HomePage />}
+					/>
+					<Route
+						path='/login'
+						element={<LoginPage />}
+					/>
+					<Route
+						path='/register'
+						element={<RegisterPage />}
+					/>
+					<Route
+						path='*'
+						element={<NotFoundPage />}
+					/>
+				</Routes>
+			</Layout>
+		</Router>
 	);
 }

@@ -1,3 +1,9 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
+
+.rdp-root {
+	--rdp-accent-color: theme('colors.amber.600');
+	--rdp-background-color: theme('colors.amber.100');
+	--rdp-range_middle-background-color: theme('colors.amber.100');
+	--rdp-day_button-border-radius: 10px;
+	/* Add more CSS variables here. */
+}

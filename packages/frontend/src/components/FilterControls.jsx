@@ -1,20 +1,14 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ChevronDownIcon } from './Icons';
-import { formatDate } from '../utils/formatDate';
+import { DateRangePicker } from './DateRangePicker'; // Import our new component
 
 const FilterControls = ({ filters, setFilters, allTags }) => {
-	const [isDatePopoverOpen, setIsDatePopoverOpen] = useState(false);
 	const [isTagPopoverOpen, setIsTagPopoverOpen] = useState(false);
-	const datePopoverRef = useRef(null);
 	const tagPopoverRef = useRef(null);
+	const isProUser = false; // Placeholder for real auth state
 
 	useEffect(() => {
 		const handleClickOutside = (event) => {
-			if (
-				datePopoverRef.current &&
-				!datePopoverRef.current.contains(event.target)
-			)
-				setIsDatePopoverOpen(false);
 			if (
 				tagPopoverRef.current &&
 				!tagPopoverRef.current.contains(event.target)
@@ -26,31 +20,12 @@ const FilterControls = ({ filters, setFilters, allTags }) => {
 			document.removeEventListener('mousedown', handleClickOutside);
 	}, []);
 
-	const displayDateRange = () => {
-		const { start, end } = filters.dateRange;
-		if (start && end) {
-			if (start === end) return formatDate(start);
-			return `${formatDate(start)} - ${formatDate(end)}`;
-		}
-		if (start) return `From ${formatDate(start)}`;
-		if (end) return `Up to ${formatDate(end)}`;
-		return 'Select Date Range';
-	};
-
 	const handleFilterChange = (key, value) => {
 		setFilters((prev) => ({ ...prev, [key]: value }));
 	};
 
-	const handleDateRangeChange = (key, value) => {
-		setFilters((prev) => ({
-			...prev,
-			dateRange: { ...prev.dateRange, [key]: value },
-		}));
-	};
-
-	const clearDateRange = () => {
-		handleFilterChange('dateRange', { start: '', end: '' });
-		setIsDatePopoverOpen(false);
+	const handleDateUpdate = (dateRange) => {
+		setFilters((prev) => ({ ...prev, dateRange }));
 	};
 
 	const handleTagSelect = (tag) => {
@@ -96,70 +71,10 @@ const FilterControls = ({ filters, setFilters, allTags }) => {
 			</div>
 			<div className='h-6 w-px bg-stone-200 hidden md:block'></div>
 			<div className='flex items-center gap-2 p-1'>
-				<div
-					className='relative'
-					ref={datePopoverRef}
-				>
-					<button
-						onClick={() => setIsDatePopoverOpen((p) => !p)}
-						className='bg-white border-none text-stone-700 text-sm font-semibold rounded-full py-2 px-4 hover:bg-stone-100 transition-colors h-10 flex items-center'
-					>
-						{displayDateRange()}
-						<ChevronDownIcon />
-					</button>
-					{isDatePopoverOpen && (
-						<div className='absolute top-full mt-2 bg-white border border-stone-200 rounded-lg shadow-xl p-4 w-64 right-0 md:right-auto'>
-							<div className='space-y-4'>
-								<div>
-									<label
-										htmlFor='start-date'
-										className='block text-sm font-medium text-stone-600'
-									>
-										Start Date
-									</label>
-									<input
-										type='date'
-										id='start-date'
-										value={filters.dateRange.start}
-										onChange={(e) =>
-											handleDateRangeChange(
-												'start',
-												e.target.value
-											)
-										}
-										className='mt-1 block w-full rounded-md border-stone-300 shadow-sm focus:border-amber-500 focus:ring-amber-500 sm:text-sm'
-									/>
-								</div>
-								<div>
-									<label
-										htmlFor='end-date'
-										className='block text-sm font-medium text-stone-600'
-									>
-										End Date
-									</label>
-									<input
-										type='date'
-										id='end-date'
-										value={filters.dateRange.end}
-										onChange={(e) =>
-											handleDateRangeChange(
-												'end',
-												e.target.value
-											)
-										}
-										className='mt-1 block w-full rounded-md border-stone-300 shadow-sm focus:border-amber-500 focus:ring-amber-500 sm:text-sm'
-									/>
-								</div>
-							</div>
-							<button
-								onClick={clearDateRange}
-								className='w-full mt-4 text-center px-4 py-2 text-sm font-semibold rounded-full bg-stone-200 text-stone-700 hover:bg-stone-300'
-							>
-								Clear
-							</button>
-						</div>
-					)}
-				</div>
+				<DateRangePicker
+					onUpdate={handleDateUpdate}
+					initialRange={filters.dateRange}
+				/>
 				<div
 					className='relative'
 					ref={tagPopoverRef}
@@ -192,6 +107,14 @@ const FilterControls = ({ filters, setFilters, allTags }) => {
 					)}
 				</div>
 			</div>
+			{isProUser && (
+				<>
+					<div className='h-6 w-px bg-stone-200 hidden md:block'></div>
+					<button className='px-4 py-2 text-sm font-semibold rounded-full bg-violet-600 text-white shadow-sm hover:bg-violet-700'>
+						View Clusters
+					</button>
+				</>
+			)}
 		</div>
 	);
 };
