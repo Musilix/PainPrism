@@ -20,7 +20,7 @@ const HomePage = () => {
 				</p>
 			</div>
 
-			{/* Centered Filter Controls */}
+			{/* Centered Filter Controls Container (Sticky) */}
 			<div className='w-full sticky top-[65px] z-30 py-4 bg-stone-50/80 backdrop-blur-sm flex justify-center'>
 				<FilterControls
 					filters={filters}

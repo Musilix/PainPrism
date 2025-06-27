@@ -1,11 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { ChevronDownIcon } from './Icons';
-import { DateRangePicker } from './DateRangePicker'; // Import our new component
+import { DateRangePicker } from './DateRangePicker';
+import { useAuth } from '../context/AuthContext';
 
 const FilterControls = ({ filters, setFilters, allTags }) => {
+	const { isProUser } = useAuth();
 	const [isTagPopoverOpen, setIsTagPopoverOpen] = useState(false);
 	const tagPopoverRef = useRef(null);
-	const isProUser = false; // Placeholder for real auth state
 
 	useEffect(() => {
 		const handleClickOutside = (event) => {
@@ -34,11 +36,11 @@ const FilterControls = ({ filters, setFilters, allTags }) => {
 	};
 
 	return (
-		<div className='relative z-20 flex flex-wrap justify-center items-center gap-2 md:gap-4 mb-10 p-2 bg-white/50 backdrop-blur-sm rounded-full shadow-sm border border-stone-200 max-w-fit mx-auto'>
+		<div className='relative z-10 flex flex-wrap justify-center items-center gap-2 md:gap-4 p-2 bg-white/90 backdrop-blur-sm rounded-full shadow-md border border-stone-200 max-w-fit mx-auto'>
 			<div className='flex items-center gap-1 p-1'>
 				<button
 					onClick={() => handleFilterChange('type', 'all')}
-					className={`px-4 py-2 text-sm font-semibold rounded-full ${
+					className={`px-4 py-2 text-sm font-semibold rounded-full transition-colors duration-200 ${
 						filters.type === 'all'
 							? 'bg-amber-600 text-white shadow-sm'
 							: 'hover:bg-stone-100 text-stone-700'
@@ -48,7 +50,7 @@ const FilterControls = ({ filters, setFilters, allTags }) => {
 				</button>
 				<button
 					onClick={() => handleFilterChange('type', 'pain-point')}
-					className={`px-4 py-2 text-sm font-semibold rounded-full ${
+					className={`px-4 py-2 text-sm font-semibold rounded-full transition-colors duration-200 ${
 						filters.type === 'pain-point'
 							? 'bg-amber-600 text-white shadow-sm'
 							: 'hover:bg-stone-100 text-stone-700'
@@ -60,7 +62,7 @@ const FilterControls = ({ filters, setFilters, allTags }) => {
 					onClick={() =>
 						handleFilterChange('type', 'product-yearning')
 					}
-					className={`px-4 py-2 text-sm font-semibold rounded-full ${
+					className={`px-4 py-2 text-sm font-semibold rounded-full transition-colors duration-200 ${
 						filters.type === 'product-yearning'
 							? 'bg-amber-600 text-white shadow-sm'
 							: 'hover:bg-stone-100 text-stone-700'
@@ -69,7 +71,29 @@ const FilterControls = ({ filters, setFilters, allTags }) => {
 					Yearnings
 				</button>
 			</div>
+
+			{/* Pro Feature: Clusters / Trends CTA */}
+			{isProUser ? (
+				<>
+					<div className='h-6 w-px bg-stone-200 hidden md:block'></div>
+					<button className='px-4 py-2 text-sm font-semibold rounded-full bg-violet-600 text-white shadow-sm hover:bg-violet-700'>
+						View Clusters
+					</button>
+				</>
+			) : (
+				<>
+					<div className='h-6 w-px bg-stone-200 hidden md:block'></div>
+					<Link
+						to='/pricing' // This now correctly links to our new pricing page
+						className='px-4 py-2 text-sm font-semibold rounded-full bg-stone-200 text-stone-700 shadow-sm hover:bg-stone-300 transition-colors'
+					>
+						✨ View Trends
+					</Link>
+				</>
+			)}
+
 			<div className='h-6 w-px bg-stone-200 hidden md:block'></div>
+
 			<div className='flex items-center gap-2 p-1'>
 				<DateRangePicker
 					onUpdate={handleDateUpdate}
@@ -107,14 +131,6 @@ const FilterControls = ({ filters, setFilters, allTags }) => {
 					)}
 				</div>
 			</div>
-			{isProUser && (
-				<>
-					<div className='h-6 w-px bg-stone-200 hidden md:block'></div>
-					<button className='px-4 py-2 text-sm font-semibold rounded-full bg-violet-600 text-white shadow-sm hover:bg-violet-700'>
-						View Clusters
-					</button>
-				</>
-			)}
 		</div>
 	);
 };

@@ -32,7 +32,7 @@ const InsightCard = ({ insight }) => {
 	return (
 		<div
 			onClick={handleClick}
-			className='bg-white/70 backdrop-blur-sm border border-stone-200 rounded-xl shadow-sm hover:shadow-lg transition-shadow duration-300 p-6 flex flex-col h-full cursor-pointer group'
+			className='bg-white/70 backdrop-blur-sm border border-stone-200 rounded-xl shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300 p-6 flex flex-col h-full cursor-pointer group'
 		>
 			<div className='flex justify-between items-start mb-4'>
 				<div
