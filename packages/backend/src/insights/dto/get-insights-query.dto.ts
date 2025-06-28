@@ -11,7 +11,7 @@ export class GetInsightsQueryDto {
 	@IsOptional()
 	@Type(() => Number)
 	@IsInt()
-	@Min(20)
+	@Min(6)
 	@Max(20)
 	limit: number = 20;
 

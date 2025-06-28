@@ -1,17 +1,76 @@
 import React, { useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { PrismIcon } from '../components/Icons';
 import PlanCard from '../components/PlanCard';
+import { useAuth } from '../context/AuthContext';
+import { apiRegister, apiLogin } from '../utils/api';
 
 const RegisterPage = () => {
-    const [searchParams] = useSearchParams();
-    const initialPlan = searchParams.get('plan') || 'pro';
-    const [selectedPlan, setSelectedPlan] = useState(initialPlan);
+	const navigate = useNavigate();
+	const { login } = useAuth();
+	const [searchParams] = useSearchParams();
+	const initialPlan = searchParams.get('plan') || 'pro';
 
-    const plans = [
-        { name: 'Free', price: '$0', featured: false },
-        { name: 'Pro', price: '$10', featured: true },
-    ];
+	const [selectedPlan, setSelectedPlan] = useState(initialPlan);
+	const [email, setEmail] = useState('');
+	const [password, setPassword] = useState('');
+	const [error, setError] = useState(null);
+	const [isLoading, setIsLoading] = useState(false);
+
+	const plans = [
+		{ name: 'Free', price: '$0', featured: false },
+		{ name: 'Pro', price: '$10', featured: true },
+	];
+
+	// --- VALIDATION LOGIC ---
+	const validateEmail = (email) => {
+		// Simple regex for email validation
+		return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+	};
+
+	const handleSubmit = async (e) => {
+		e.preventDefault();
+		setError(null);
+
+		// --- Frontend Validation ---
+		if (!validateEmail(email)) {
+			setError('Please enter a valid email address.');
+			return;
+		}
+		if (password.length < 8) {
+			setError('Password must be at least 8 characters long.');
+			return;
+		}
+		// --- End Validation ---
+
+		setIsLoading(true);
+
+		try {
+			const registerData = await apiRegister({
+				email,
+				password,
+				plan: selectedPlan,
+			});
+
+			if (registerData) {
+				const loginData = await apiLogin({ email, password });
+				if (loginData.access_token) {
+					login(loginData.access_token);
+					navigate('/');
+				}
+			}
+		} catch (err) {
+			if (err.message.includes('Failed to fetch')) {
+				setError(
+					'Cannot connect to the server. Please ensure it is running.'
+				);
+			} else {
+				setError(err.message || 'An unexpected error occurred.');
+			}
+		} finally {
+			setIsLoading(false);
+		}
+	};
 
 	return (
 		<div className='w-full max-w-md mx-auto p-8'>
@@ -26,28 +85,39 @@ const RegisterPage = () => {
 					Create your account
 				</h2>
 			</div>
-			
+
 			<div className='p-8 border border-stone-200 rounded-xl shadow-xl bg-white'>
-				<form className='space-y-6'>
-                    <div>
-                        <label className='block text-sm font-medium text-gray-700 mb-2'>
-                            Choose your plan
-                        </label>
-                        <div className='grid grid-cols-2 gap-4'>
-                            {plans.map((plan) => (
-                                <PlanCard
-                                    key={plan.name}
-                                    plan={plan}
-                                    isSelected={
-                                        selectedPlan === plan.name.toLowerCase()
-                                    }
-                                    onSelect={setSelectedPlan}
-                                    size='small'
-                                />
-                            ))}
-                        </div>
-                    </div>
-					
+				<form
+					className='space-y-6'
+					onSubmit={handleSubmit}
+				>
+					{error && (
+						<div
+							className='bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-md'
+							role='alert'
+						>
+							<span className='block sm:inline'>{error}</span>
+						</div>
+					)}
+					<div>
+						<label className='block text-sm font-medium text-gray-700 mb-2'>
+							Choose your plan
+						</label>
+						<div className='grid grid-cols-2 gap-4'>
+							{plans.map((plan) => (
+								<PlanCard
+									key={plan.name}
+									plan={plan}
+									isSelected={
+										selectedPlan === plan.name.toLowerCase()
+									}
+									onSelect={setSelectedPlan}
+									size='small'
+								/>
+							))}
+						</div>
+					</div>
+
 					<div>
 						<label
 							htmlFor='email'
@@ -61,6 +131,8 @@ const RegisterPage = () => {
 							type='email'
 							autoComplete='email'
 							required
+							value={email}
+							onChange={(e) => setEmail(e.target.value)}
 							className='mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-amber-500 focus:border-amber-500'
 						/>
 					</div>
@@ -77,23 +149,29 @@ const RegisterPage = () => {
 							type='password'
 							autoComplete='new-password'
 							required
+							value={password}
+							onChange={(e) => setPassword(e.target.value)}
 							className='mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-amber-500 focus:border-amber-500'
 						/>
 					</div>
 					<div>
 						<button
 							type='submit'
-							className='w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-amber-600 hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500'
+							disabled={isLoading}
+							className='w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-amber-600 hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 disabled:opacity-50'
 						>
-							Sign up for{' '}
-							{selectedPlan.charAt(0).toUpperCase() +
-								selectedPlan.slice(1)}
+							{isLoading
+								? 'Creating account...'
+								: `Sign up for ${
+										selectedPlan.charAt(0).toUpperCase() +
+										selectedPlan.slice(1)
+								  }`}
 						</button>
 					</div>
 				</form>
 			</div>
 
-            <p className='mt-6 text-center text-sm'>
+			<p className='mt-6 text-center text-sm'>
 				Already have an account?{' '}
 				<Link
 					to='/login'

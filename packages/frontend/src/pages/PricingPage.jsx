@@ -1,8 +1,14 @@
+// PainPrism-main/packages/frontend/src/pages/PricingPage.jsx
+
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { SparkleIcon } from '../components/Icons';
 import PlanCard from '../components/PlanCard';
+import { useAuth } from '../context/AuthContext';
 
 const PricingPage = () => {
+	const { isLoggedIn, isProUser } = useAuth();
+
 	const plans = [
 		{
 			name: 'Free',
@@ -11,11 +17,11 @@ const PricingPage = () => {
 			description:
 				'A great way to get started and see the latest insights as they come in.',
 			features: [
-				{ text: 'Unlimited insight Browse', pro: false },
+				{ text: 'View latest insights', pro: false },
 				{ text: 'Basic filtering by type and tag', pro: false },
 				{ text: 'Daily data refresh', pro: false },
 			],
-			cta: 'Start for free',
+			cta: 'Get Started',
 			featured: false,
 		},
 		{
@@ -26,10 +32,14 @@ const PricingPage = () => {
 				'Unlock the full power of market analysis with unlimited access and advanced tools.',
 			features: [
 				{ text: 'Access to Trend Clusters', pro: true },
-				{ text: 'Advanced date-range filtering', pro: true },
+				{
+					text: 'Market potential and audience filtering',
+					pro: true,
+				},
+				{ text: 'Export data (soon)', pro: true },
 				{ text: 'Priority support', pro: true },
 			],
-			cta: 'Start Pro Trial',
+			cta: 'Upgrade to Pro',
 			featured: true,
 		},
 	];
@@ -45,23 +55,48 @@ const PricingPage = () => {
 					A plan for every founder
 				</p>
 			</div>
-			<p className='mx-auto mt-6 max-w-2xl text-center text-lg leading-8 text-stone-600'>
-				Whether you're exploring ideas or ready to dive deep, we have a
-				plan that fits your needs.
-			</p>
-			<div className='isolate flex justify-center items-stretch flex-wrap gap-8 mt-16'>
-				<PlanCard
-					plan={plans[0]}
-					isClickable={true}
-					size='large'
-				/>
-				<PlanCard
-					plan={plans[1]}
-					isClickable={true}
-					size='large'
-					isSelected={true}
-				/>
-			</div>
+
+			{isProUser ? (
+				<div className='mt-10 text-center bg-violet-50 border border-violet-200 rounded-lg p-8 max-w-md mx-auto'>
+					<h3 className='text-lg font-semibold text-violet-800'>
+						You are already a Pro member!
+					</h3>
+					<p className='mt-2 text-sm text-stone-600'>
+						Thank you for your support. You have access to all
+						features.
+					</p>
+					<Link
+						to='/'
+						className='mt-4 inline-block bg-violet-600 text-white font-semibold px-6 py-2 rounded-full hover:bg-violet-700 cursor-pointer'
+					>
+						Back to Insights
+					</Link>
+				</div>
+			) : (
+				<>
+					<p className='mx-auto mt-6 max-w-2xl text-center text-lg leading-8 text-stone-600'>
+						Whether you're exploring ideas or ready to dive deep, we
+						have a plan that fits your needs.
+					</p>
+					<div className='isolate flex justify-center items-stretch flex-wrap gap-8 mt-16'>
+						<PlanCard
+							plan={plans[0]}
+							isClickable={!isLoggedIn}
+							isSelected={isLoggedIn && !isProUser}
+							size='large'
+						/>
+						<PlanCard
+							plan={plans[1]}
+							isClickable={true}
+							// For a free user, Pro is the selected upgrade path
+							isSelected={
+								!isLoggedIn || (isLoggedIn && !isProUser)
+							}
+							size='large'
+						/>
+					</div>
+				</>
+			)}
 		</div>
 	);
 };

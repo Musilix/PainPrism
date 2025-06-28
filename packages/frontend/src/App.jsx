@@ -4,7 +4,9 @@ import Layout from './components/Layout';
 import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
-import PricingPage from './pages/PricingPage'; // Import the new page
+import PricingPage from './pages/PricingPage';
+import ProfilePage from './pages/ProfilePage';
+import InsightsPage from './pages/InsightsPage'; // <-- Import new page
 import NotFoundPage from './pages/NotFoundPage';
 
 export default function App() {
@@ -17,6 +19,10 @@ export default function App() {
 						element={<HomePage />}
 					/>
 					<Route
+						path='/insights'
+						element={<InsightsPage />}
+					/>
+					<Route
 						path='/login'
 						element={<LoginPage />}
 					/>
@@ -27,6 +33,10 @@ export default function App() {
 					<Route
 						path='/pricing'
 						element={<PricingPage />}
+					/>
+					<Route
+						path='/profile'
+						element={<ProfilePage />}
 					/>
 					<Route
 						path='*'

@@ -1,27 +1,42 @@
-import React, { createContext, useState, useContext } from 'react';
+import React, { createContext, useState, useContext, useEffect } from 'react';
+import { jwtDecode } from 'jwt-decode'; // We need a JWT decoding library
 
 const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
-	// In a real app, you'd initialize this from localStorage
+	const [token, setToken] = useState(() => localStorage.getItem('authToken'));
 	const [user, setUser] = useState(null);
 
-	// Example login function
-	const login = (userData) => {
-		setUser(userData);
-		// In a real app, you'd also set the JWT in localStorage here
+	useEffect(() => {
+		if (token) {
+			try {
+				const decodedUser = jwtDecode(token);
+				setUser(decodedUser);
+			} catch (error) {
+				console.error('Failed to decode token:', error);
+				setToken(null);
+				localStorage.removeItem('authToken');
+			}
+		} else {
+			setUser(null);
+		}
+	}, [token]);
+
+	const login = (newToken) => {
+		localStorage.setItem('authToken', newToken);
+		setToken(newToken);
 	};
 
-	// Example logout function
 	const logout = () => {
-		setUser(null);
-		// In a real app, you'd remove the JWT from localStorage
+		localStorage.removeItem('authToken');
+		setToken(null);
 	};
 
 	const value = {
 		user,
+		token,
 		isLoggedIn: !!user,
-		isProUser: user?.status === 'pro', // Assuming the user object has a status
+		isProUser: user?.status === 'pro',
 		login,
 		logout,
 	};

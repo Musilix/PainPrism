@@ -62,7 +62,7 @@ export const DateRangePicker = ({ onUpdate, initialRange }) => {
 		>
 			<button
 				onClick={() => setIsOpen((prev) => !prev)}
-				className='bg-white border-none text-stone-700 text-sm font-semibold rounded-full py-2 px-4 hover:bg-stone-100 transition-colors h-10 flex items-center'
+				className='bg-white border border-stone-200/80 text-stone-700 text-sm font-semibold rounded-full py-2 px-4 hover:bg-stone-100 transition-colors h-10 flex items-center cursor-pointer'
 			>
 				{displayDateRange()}
 				<ChevronDownIcon />
