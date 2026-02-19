@@ -1,5 +1,5 @@
-import { Type } from 'class-transformer';
-import { IsInt, IsOptional, Max, Min } from 'class-validator';
+import { Type, Transform } from 'class-transformer';
+import { IsEnum, IsInt, IsOptional, Max, Min, IsArray } from 'class-validator';
 
 export class GetInsightsQueryDto {
 	@IsOptional()
@@ -19,11 +19,22 @@ export class GetInsightsQueryDto {
 	type?: string;
 
 	@IsOptional()
-	tag?: string;
+	@IsArray()
+	@Transform(({ value }) =>
+		typeof value === 'string' ? value.split(',') : value
+	)
+	tags?: string[];
 
 	@IsOptional()
 	startDate?: string;
 
 	@IsOptional()
 	endDate?: string;
+
+	@IsOptional()
+	sortBy?: 'date';
+
+	@IsOptional()
+	@IsEnum(['asc', 'desc'])
+	sortOrder?: 'asc' | 'desc';
 }

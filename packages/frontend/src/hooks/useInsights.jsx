@@ -1,6 +1,112 @@
-import { useState, useEffect, useCallback } from 'react';
-import { apiGetInsights } from '../utils/api';
-import { useAuth } from '../context/AuthContext';
+import React, {
+	createContext,
+	useState,
+	useContext,
+	useEffect,
+	useCallback,
+} from 'react';
+import { jwtDecode } from 'jwt-decode';
+
+// --- INLINED DEPENDENCIES TO PREVENT BUILD ERRORS ---
+
+const API_BASE_URL = 'http://localhost:3000';
+
+const handleResponse = async (response) => {
+	if (!response.ok) {
+		const errorData = await response.json().catch(() => ({
+			message: 'An unknown error occurred.',
+		}));
+		throw new Error(
+			errorData.message || `HTTP error! status: ${response.status}`
+		);
+	}
+	return response.json();
+};
+
+export const apiGetInsights = async (filters, token) => {
+	const params = new URLSearchParams();
+	if (filters.page) params.append('page', filters.page);
+	if (filters.limit) params.append('limit', filters.limit);
+	if (filters.type && filters.type !== 'all')
+		params.append('type', filters.type);
+	if (filters.tags && filters.tags.length > 0) {
+		params.append('tags', filters.tags.join(','));
+	}
+	if (filters.dateRange?.start)
+		params.append('startDate', filters.dateRange.start);
+	if (filters.dateRange?.end) params.append('endDate', filters.dateRange.end);
+	if (filters.sortBy) params.append('sortBy', filters.sortBy);
+	if (filters.sortOrder) params.append('sortOrder', filters.sortOrder);
+
+	const headers = {
+		'Content-Type': 'application/json',
+	};
+
+	if (token) {
+		headers['Authorization'] = `Bearer ${token}`;
+	}
+
+	const response = await fetch(
+		`${API_BASE_URL}/insights?${params.toString()}`,
+		{
+			method: 'GET',
+			headers,
+		}
+	);
+
+	return handleResponse(response);
+};
+
+const AuthContext = createContext(null);
+
+export const AuthProvider = ({ children }) => {
+	const [token, setToken] = useState(() => localStorage.getItem('authToken'));
+	const [user, setUser] = useState(null);
+
+	useEffect(() => {
+		if (token) {
+			try {
+				const decodedUser = jwtDecode(token);
+				setUser(decodedUser);
+			} catch (error) {
+				console.error('Failed to decode token:', error);
+				setToken(null);
+				localStorage.removeItem('authToken');
+			}
+		} else {
+			setUser(null);
+		}
+	}, [token]);
+
+	const login = (newToken) => {
+		localStorage.setItem('authToken', newToken);
+		setToken(newToken);
+	};
+
+	const logout = () => {
+		localStorage.removeItem('authToken');
+		setToken(null);
+	};
+
+	const value = {
+		user,
+		token,
+		isLoggedIn: !!user,
+		isProUser: user?.status === 'pro',
+		login,
+		logout,
+	};
+
+	return (
+		<AuthContext.Provider value={value}>{children}</AuthContext.Provider>
+	);
+};
+
+export const useAuth = () => {
+	return useContext(AuthContext);
+};
+
+// --- END INLINED DEPENDENCIES ---
 
 // Debounce function to prevent API calls on every rapid filter change
 function debounce(func, wait) {
@@ -16,28 +122,28 @@ function debounce(func, wait) {
 }
 
 export const useInsights = (initialConfig = {}) => {
-	const { token } = useAuth();
+	const { token } = useAuth() || {};
 	const [insights, setInsights] = useState([]);
 	const [allTags, setAllTags] = useState(['all']);
 	const [isLoading, setIsLoading] = useState(true);
 	const [error, setError] = useState(null);
 
-	// New state for pagination
 	const [page, setPage] = useState(1);
-	const [totalCount, setTotalCount] = useState(0); // Mocked for now
+	const [totalCount, setTotalCount] = useState(0);
+
+	const [sort, setSort] = useState({ sortBy: 'date', sortOrder: 'desc' });
 
 	const limit = initialConfig.limit || 20;
 	const totalPages = Math.ceil(totalCount / limit);
 
 	const [filters, setFilters] = useState({
 		type: 'all',
-		tag: 'all',
+		tags: [],
 		dateRange: { start: '', end: '' },
 	});
 
-	// The fetch function is now simpler, just gets a specific page
 	const fetchInsights = useCallback(
-		async (currentFilters, currentPage) => {
+		async (currentFilters, currentPage, currentSort) => {
 			setIsLoading(true);
 			setError(null);
 
@@ -46,23 +152,32 @@ export const useInsights = (initialConfig = {}) => {
 					...currentFilters,
 					page: currentPage,
 					limit,
+					sortBy: currentSort.sortBy,
+					sortOrder: currentSort.sortOrder,
 				};
-				const fetchedData = await apiGetInsights(queryFilters, token);
+				const response = await apiGetInsights(queryFilters, token);
 
-				// TODO: In a real app, the API would return the total count.
-				// We are mocking it here for UI development.
-				setTotalCount(100);
+				// FIX: Correctly handle the API response object
+				const fetchedData = response.data || [];
+				const total = response.total || 0;
 
-				const mappedData = fetchedData.map((item) => ({
+				setTotalCount(total);
+
+				let processedData = fetchedData.map((item) => ({
 					...item,
 					text: item.textSummary,
 					date: item.createdAt,
 				}));
 
-				setInsights(mappedData);
+				if (initialConfig.limit) {
+					processedData.sort(() => 0.5 - Math.random());
+					processedData = processedData.slice(0, initialConfig.limit);
+				}
+
+				setInsights(processedData);
 
 				const newTags = new Set(
-					mappedData.flatMap((i) => i.tags || [])
+					fetchedData.flatMap((i) => i.tags || [])
 				);
 				setAllTags((prevTags) => [
 					'all',
@@ -76,36 +191,35 @@ export const useInsights = (initialConfig = {}) => {
 				setIsLoading(false);
 			}
 		},
-		[token, limit]
+		[token, limit, initialConfig.limit]
 	);
 
-	// Debounced version for filter controls
 	const debouncedFetch = useCallback(debounce(fetchInsights, 300), [
 		fetchInsights,
 	]);
 
-	// Effect to fetch data when filters or page change
 	useEffect(() => {
-		// When filters change, reset to page 1
-		if (page !== 1) {
+		if (page !== 1 && !initialConfig.limit) {
 			setPage(1);
 		}
-		debouncedFetch(filters, page);
-	}, [filters, debouncedFetch]);
+		debouncedFetch(filters, page, sort);
+	}, [filters, sort, debouncedFetch]);
 
-	// Fetch when page changes directly
 	useEffect(() => {
-		fetchInsights(filters, page);
+		if (!initialConfig.limit) {
+			debouncedFetch(filters, page, sort);
+		}
 	}, [page]);
 
 	return {
 		insights,
 		filters,
 		setFilters,
+		sort,
+		setSort,
 		allTags,
 		isLoading,
 		error,
-		// Pagination data and controls
 		page,
 		setPage,
 		totalPages,

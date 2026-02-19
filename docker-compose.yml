@@ -9,8 +9,9 @@ services:
             POSTGRES_USER: myuser
             POSTGRES_PASSWORD: mypassword
             POSTGRES_DB: pain_prism
+        # Use 5433 on host so we don't conflict with native Windows Postgres on 5432
         ports:
-            - '5432:5432'
+            - '5433:5432'
         volumes:
             - postgres_data:/var/lib/postgresql/data
 

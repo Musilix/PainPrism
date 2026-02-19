@@ -34,8 +34,8 @@ const InsightsPage = () => {
 		<div className='flex flex-col items-center w-full'>
 			<div className='w-full max-w-7xl mx-auto'>
 				<div className='sm:flex sm:items-center my-8'>
-					<div className='sm:flex-auto'>
-						<h1 className='text-2xl font-bold leading-6 text-stone-900'>
+					<div className='mx-4 my-2 sm:flex-auto'>
+						<h1 className='text-3xl font-bold leading-6 text-stone-900'>
 							Insights
 						</h1>
 						<p className='mt-2 text-sm text-stone-600'>
@@ -45,7 +45,6 @@ const InsightsPage = () => {
 					</div>
 				</div>
 
-				{/* The Table now contains the filters */}
 				<div className='mt-4 flow-root'>
 					<div className='-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8'>
 						<div className='inline-block min-w-full py-2 align-middle sm:px-6 lg:px-8'>
@@ -78,7 +77,7 @@ const InsightsPage = () => {
 								page >= GUEST_PAGE_LIMIT &&
 								totalPages > GUEST_PAGE_LIMIT && (
 									<div className='mt-8 text-center p-8 bg-gradient-to-br from-amber-50 via-white to-violet-50 border border-stone-200 rounded-2xl shadow-lg'>
-										<div className='flex justify-center items-center mx-auto w-12 h-12 bg-amber-100 rounded-full border-4 border-white'>
+										<div className='flex justify-center align-center items-center mx-auto w-12 h-12 bg-amber-100 rounded-full border-4 border-white'>
 											<SparkleIcon className='h-6 w-6 text-amber-600' />
 										</div>
 										<h3 className='mt-4 text-xl font-bold text-stone-800'>
