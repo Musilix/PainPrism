@@ -1,9 +1,9 @@
 import { Page } from 'playwright';
 import { insertPost } from '../db/queries.js';
 import { ScraperSource, RawComment } from '../types.js';
+import { PAGES_TO_SCRAPE_PER_SECTION } from '../constants.js';
 
 const HN_BASE_URL = 'https://news.ycombinator.com/';
-const PAGES_TO_SCRAPE_PER_SECTION = 1;
 
 export class HackerNewsSource implements ScraperSource {
 	public name = 'Hacker News';
@@ -21,12 +21,15 @@ export class HackerNewsSource implements ScraperSource {
 				await page.goto(currentUrl, { waitUntil: 'domcontentloaded' });
 
 				const postRows = await page.$$('tr.athing');
+				let added = 0;
 				for (const row of postRows) {
 					const sourceId = await row.getAttribute('id');
 					if (sourceId) {
 						postUrls.add(`${HN_BASE_URL}item?id=${sourceId}`);
+						added++;
 					}
 				}
+				console.log(`   -> Found ${added} posts on this page (${postUrls.size} unique total)`);
 
 				const nextPageLink = await page.$('a.morelink');
 				if (!nextPageLink) break;
@@ -43,9 +46,8 @@ export class HackerNewsSource implements ScraperSource {
 	async processPost(
 		page: Page,
 		url: string,
-		onCommentFound: (comment: RawComment) => Promise<void> // It's now received here
+		onCommentFound: (comment: RawComment) => Promise<void>
 	): Promise<void> {
-		console.log(`   -> Processing post: ${url}`);
 		try {
 			await page.goto(url, { waitUntil: 'domcontentloaded' });
 
@@ -65,8 +67,10 @@ export class HackerNewsSource implements ScraperSource {
 				(await page
 					.$eval('td.subtext a.hnuser', (el) => el.textContent)
 					.catch(() => 'N/A')) || 'N/A';
-	
-			// Keep a record in the db to know we've looked at this post before
+
+			const titleShort = title.length > 60 ? title.slice(0, 57) + '...' : title;
+			console.log(`   -> ${titleShort}`);
+
 			const postId = await insertPost({
 				sourceId,
 				sourceUrl: url,
@@ -75,20 +79,18 @@ export class HackerNewsSource implements ScraperSource {
 				author,
 			});
 
-			// The key step when we process a post is to actually process it's comments!
-			// Technically this scrapeComments fn just grabs the data of comments and sends it
-			// off to our pipeline.service to actually get processed properly
 			if (postId) {
-				await this.scrapeComments(
+				const commentCount = await this.scrapeComments(
 					page,
 					postId,
 					title,
 					content,
 					onCommentFound
 				);
+				console.log(`   -> ✓ Saved ${commentCount} comments`);
 			}
 		} catch (err) {
-			console.error(`      [Error] Failed to process post ${url}:`, err);
+			console.error(`   -> [Error] Failed to process post:`, err);
 		}
 	}
 
@@ -97,29 +99,24 @@ export class HackerNewsSource implements ScraperSource {
 		postId: number,
 		postTitle: string,
 		postContent: string,
-		onCommentFound: (comment: RawComment) => Promise<void> // Received here too
-	): Promise<void> {
-		console.log(`      -> Scraping comments for post ID: ${postId}`);
+		onCommentFound: (comment: RawComment) => Promise<void>
+	): Promise<number> {
 		const commentRows = await page.$$('tr.comtr');
-		console.log(`         Found ${commentRows.length} potential comments.`);
-
 		const commentLineage: (string | null)[] = [];
+		let saved = 0;
+		const logInterval = 25;
 
 		for (const commentRow of commentRows) {
 			try {
 				const sourceCommentId = await commentRow.getAttribute('id');
 				if (!sourceCommentId) continue;
 
-				// Find indent level of comment and thereby figure out where it stands in a given thread
-				// 1 indent means its a reply, 2 means its a reply to a reply, and so on
-				// This is useful for retrieving the scope of a comment and providing more context to it
 				const indentWidth =
 					(await commentRow.$eval('img[src="s.gif"]', (img) =>
 						parseInt(img.getAttribute('width') || '0')
 					)) || 0;
 				const indentLevel = indentWidth / 40;
 
-				// Grab comment data
 				const author =
 					(await commentRow
 						.$eval('.comhead .hnuser', (el) => el.textContent)
@@ -129,7 +126,6 @@ export class HackerNewsSource implements ScraperSource {
 					.catch(() => null);
 
 				if (text) {
-					// Set up 3 tier lineage, if possible
 					const parentSourceId =
 						indentLevel > 0
 							? commentLineage[indentLevel - 1]
@@ -139,8 +135,6 @@ export class HackerNewsSource implements ScraperSource {
 							? commentLineage[indentLevel - 2]
 							: null;
 
-					// Forward the raw data to the orchestrator/pipeline function.
-					// This class's responsibility ends here.
 					await onCommentFound({
 						postId,
 						sourceCommentId,
@@ -152,16 +146,18 @@ export class HackerNewsSource implements ScraperSource {
 						post_content: postContent,
 					});
 
-					// Update lineage for the next comment in the thread.
+					saved++;
+					if (saved % logInterval === 0) {
+						console.log(`      ... ${saved} comments`);
+					}
+
 					commentLineage[indentLevel] = sourceCommentId;
 				}
 			} catch (error) {
-				console.error(
-					`      [Error] Failed to process a comment row.`,
-					error
-				);
-				continue; // Continue to the next comment
+				console.error(`      [Error] Comment row:`, error);
+				continue;
 			}
 		}
+		return saved;
 	}
 }

@@ -9,7 +9,11 @@
 		"build": "tsc",
 		"start": "node dist/main.js",
 		"db:generate": "drizzle-kit generate",
-		"db:migrate": "node --loader ts-node/esm src/db/migrate.ts"
+		"db:migrate": "node --loader ts-node/esm src/db/migrate.ts",
+		"score": "node --loader ts-node/esm src/jobs/run-score.ts",
+		"bundles:build": "node --loader ts-node/esm src/jobs/run-bundles-build.ts",
+		"bundles:analyze": "node --loader ts-node/esm src/jobs/run-bundles-analyze.ts",
+		"post-scrape": "node --loader ts-node/esm src/jobs/post-scrape-job.ts"
 	},
 	"dependencies": {
 		"dotenv": "^16.6.0",

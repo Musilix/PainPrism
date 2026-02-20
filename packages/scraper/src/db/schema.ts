@@ -4,6 +4,7 @@ import {
 	varchar,
 	timestamp,
 	integer,
+	real,
 	pgTable,
 	primaryKey,
 	customType,
@@ -28,6 +29,8 @@ export const posts = pgTable('posts', {
 	post_content: text('post_content'),
 	author: varchar('author', { length: 255 }),
 	scrapedAt: timestamp('scraped_at', { withTimezone: true }).defaultNow(),
+	usefulnessScore: real('usefulness_score'),
+	generalityScore: real('generality_score'),
 });
 
 export const comments = pgTable('comments', {
@@ -44,7 +47,52 @@ export const comments = pgTable('comments', {
 	author: varchar('author', { length: 255 }),
 	text: text('text').notNull(),
 	scrapedAt: timestamp('scraped_at', { withTimezone: true }).defaultNow(),
+	usefulnessScore: real('usefulness_score'),
+	generalityScore: real('generality_score'),
 });
+
+export const bundles = pgTable('bundles', {
+	id: serial('id').primaryKey(),
+	postId: integer('post_id')
+		.references(() => posts.id, { onDelete: 'cascade' })
+		.notNull(),
+	rootCommentId: integer('root_comment_id').references(
+		(): AnyPgColumn => comments.id
+	),
+	bundleType: varchar('bundle_type', { length: 50 }).notNull().default('full_thread'),
+	medianUsefulness: real('median_usefulness'),
+	medianGenerality: real('median_generality'),
+	avgUsefulness: real('avg_usefulness'),
+	avgGenerality: real('avg_generality'),
+	maxUsefulness: real('max_usefulness'),
+	maxGenerality: real('max_generality'),
+	synopsis: text('synopsis'),
+	type: varchar('type', { length: 50 }),
+	subjectName: varchar('subject_name', { length: 255 }),
+	subjectDescription: text('subject_description'),
+	audienceType: varchar('audience_type', { length: 50 }),
+	marketPotential: varchar('market_potential', { length: 50 }),
+	tags: text('tags').array(),
+	/** Number of comments included when this bundle was built; used to detect new comments and refresh. */
+	commentCountAtCreation: integer('comment_count_at_creation'),
+	createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+	updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+});
+
+export const bundleComments = pgTable(
+	'bundle_comments',
+	{
+		bundleId: integer('bundle_id')
+			.references(() => bundles.id, { onDelete: 'cascade' })
+			.notNull(),
+		commentId: integer('comment_id')
+			.references(() => comments.id, { onDelete: 'cascade' })
+			.notNull(),
+	},
+	(table) => ({
+		pk: primaryKey({ columns: [table.bundleId, table.commentId] }),
+	})
+);
 
 export const insights = pgTable('insights', {
 	id: serial('id').primaryKey(),

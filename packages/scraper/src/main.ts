@@ -1,9 +1,27 @@
-import { chromium } from 'playwright';
-import { HackerNewsSource } from './sources/hackernews.source.js';
-import { ScraperSource } from './types.js';
-import { CommentProcessingService } from './pipeline/pipeline.service.js';
+import * as dotenv from 'dotenv';
+import { resolve } from 'path';
+
+// Load .env before any other imports that use process.env
+dotenv.config({ path: resolve(process.cwd(), '.env') });
+
+// Surface real errors; Node often hides non-Error throws
+process.on('uncaughtException', (err) => {
+	console.error('uncaughtException:', err);
+	process.exit(1);
+});
+process.on('unhandledRejection', (reason, promise) => {
+	console.error('unhandledRejection:', reason, promise);
+	process.exit(1);
+});
 
 async function main() {
+	// Dynamic import so env + handlers are in place before playwright/pipeline load
+	const { chromium } = await import('playwright');
+	const { HackerNewsSource } = await import('./sources/hackernews.source.js');
+	const { CommentProcessingService } = await import(
+		'./pipeline/pipeline.service.js'
+	);
+
 	console.log('🚀 Starting The Pain Prism scraper...');
 
 	const browser = await chromium.launch({ headless: false });
@@ -13,25 +31,29 @@ async function main() {
 	});
 	const page = await context.newPage();
 
-	// The source list is clean and simple.
-	const sourcesToScrape: ScraperSource[] = [
-		// A source is given an orchestrator which is what handles the processing steps
-		new HackerNewsSource(),
-		// new RedditSource(), // Adding a new source is now trivial.
-	];
+	const sourcesToScrape = [new HackerNewsSource()];
 
+	const { tryAcquireLock, releaseLock } = await import('./jobs/lock.js');
+	if (!tryAcquireLock('scraper')) {
+		console.log('Another scraper run is in progress; exiting.');
+		await browser.close();
+		return;
+	}
+
+	let hadError = false;
 	try {
 		for (const source of sourcesToScrape) {
 			console.log(`\n\n--- Scraping Source: ${source.name} ---`);
 			const postUrls = await source.collectPostUrls(page);
+			const urlList = Array.from(postUrls);
 			console.log(
-				`[${source.name}] Found ${postUrls.size} unique posts to process.`
+				`[${source.name}] Found ${urlList.length} unique posts to process.\n`
 			);
 
-			for (const url of Array.from(postUrls)) {
-				// A new pipeline (and a new cache) is created for each post.
+			for (let i = 0; i < urlList.length; i++) {
+				const url = urlList[i];
+				console.log(`\n[Post ${i + 1}/${urlList.length}] ${url}`);
 				const pipeline = new CommentProcessingService();
-				// The scraper is given the pipeline's processing function for this single post.
 				await source.processPost(
 					page,
 					url,
@@ -40,13 +62,15 @@ async function main() {
 			}
 		}
 	} catch (error) {
+		hadError = true;
 		console.error(
 			'❌ A fatal error occurred during the main scraping process:',
 			error
 		);
 	} finally {
+		releaseLock('scraper');
 		await browser.close();
-		console.log('\n\n✅ Scraper finished. Browser closed.');
+		console.log(hadError ? '\n\n⚠️ Scraper stopped (see error above). Browser closed.' : '\n\n✅ Scraper finished. Browser closed.');
 	}
 }
 
