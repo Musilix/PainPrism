@@ -75,7 +75,7 @@ const ProfilePage = () => {
 						</div>
 						{user.status === 'free' && (
 							<Link
-								to='/pricing'
+								to='/checkout'
 								className='mt-3 sm:mt-0 flex items-center justify-center gap-2 text-sm font-semibold bg-violet-600 text-white px-4 py-2 rounded-full hover:bg-violet-700 transition-colors cursor-pointer'
 							>
 								<SparkleIcon className='h-4 w-4' />
