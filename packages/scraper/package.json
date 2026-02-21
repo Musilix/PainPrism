@@ -1,34 +1,35 @@
 {
-	"name": "scraper",
-	"version": "1.0.0",
-	"type": "module",
-	"description": "Scrapes and analyzes data for The Pain Prism.",
-	"main": "dist/main.js",
-	"scripts": {
-		"scrape": "node --loader ts-node/esm src/main.ts",
-		"build": "tsc",
-		"start": "node dist/main.js",
-		"db:generate": "drizzle-kit generate",
-		"db:migrate": "node --loader ts-node/esm src/db/migrate.ts",
-		"score": "node --loader ts-node/esm src/jobs/run-score.ts",
-		"bundles:build": "node --loader ts-node/esm src/jobs/run-bundles-build.ts",
-		"bundles:analyze": "node --loader ts-node/esm src/jobs/run-bundles-analyze.ts",
-		"post-scrape": "node --loader ts-node/esm src/jobs/post-scrape-job.ts"
-	},
-	"dependencies": {
-		"dotenv": "^16.6.0",
-		"drizzle-orm": "^0.44.2",
-		"node-cron": "^4.1.1",
-		"openai": "^5.8.1",
-		"pg": "^8.16.2",
-		"playwright": "^1.53.1"
-	},
-	"devDependencies": {
-		"@types/node": "^24.0.4",
-		"@types/node-cron": "^3.0.11",
-		"@types/pg": "^8.15.4",
-		"drizzle-kit": "^0.31.3",
-		"ts-node": "^10.9.2",
-		"typescript": "^5.8.3"
-	}
+  "name": "scraper",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Scrapes and analyzes data for The Pain Prism.",
+  "main": "dist/main.js",
+  "scripts": {
+    "scrape": "node --loader ts-node/esm src/main.ts",
+    "build": "tsc",
+    "start": "node dist/main.js",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "node --loader ts-node/esm src/db/migrate.ts",
+    "score": "node --loader ts-node/esm src/jobs/run-score.ts",
+    "bundles:build": "node --loader ts-node/esm src/jobs/run-bundles-build.ts",
+    "bundles:analyze": "node --loader ts-node/esm src/jobs/run-bundles-analyze.ts",
+    "post-scrape": "node --loader ts-node/esm src/jobs/post-scrape-job.ts",
+    "bundles:clear-analysis": "node --loader ts-node/esm src/jobs/run-clear-bundle-analysis.ts"
+  },
+  "dependencies": {
+    "dotenv": "^16.6.0",
+    "drizzle-orm": "^0.44.2",
+    "node-cron": "^4.1.1",
+    "openai": "^5.8.1",
+    "pg": "^8.16.2",
+    "playwright": "^1.53.1"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.4",
+    "@types/node-cron": "^3.0.11",
+    "@types/pg": "^8.15.4",
+    "drizzle-kit": "^0.31.3",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.3"
+  }
 }
