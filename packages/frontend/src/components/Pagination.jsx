@@ -1,6 +1,6 @@
 import React from 'react';
 
-const Pagination = ({ currentPage, totalPages, onPageChange }) => {
+const Pagination = ({ currentPage, totalPages, onPageChange, nextDisabled = false }) => {
 	const handlePrevious = () => {
 		onPageChange(Math.max(1, currentPage - 1));
 	};
@@ -8,6 +8,8 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
 	const handleNext = () => {
 		onPageChange(Math.min(totalPages, currentPage + 1));
 	};
+
+	const isNextDisabled = nextDisabled || currentPage === totalPages;
 
 	if (totalPages <= 1) {
 		return null;
@@ -34,7 +36,7 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
 				</button>
 				<button
 					onClick={handleNext}
-					disabled={currentPage === totalPages}
+					disabled={isNextDisabled}
 					className='relative ml-3 inline-flex items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-stone-900 ring-1 ring-inset ring-stone-300 hover:bg-stone-50 focus-visible:outline-offset-0 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer'
 				>
 					Next

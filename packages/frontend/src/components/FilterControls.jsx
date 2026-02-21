@@ -7,7 +7,7 @@ import React, {
 } from 'react';
 import { Link } from 'react-router-dom';
 import { DayPicker } from 'react-day-picker';
-import { format } from 'date-fns';
+import { format, parse, parseISO, isValid } from 'date-fns';
 // Note: To ensure the date picker styles load correctly,
 // please add the following import to your global CSS file (e.g., src/index.css):
 // @import 'react-day-picker/dist/style.css';
@@ -36,8 +36,24 @@ const ChevronDownIcon = () => (
 	</svg>
 );
 
+const CalendarIcon = () => (
+	<svg className='h-4 w-4 text-stone-500' xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' strokeWidth={1.5} stroke='currentColor'>
+		<path strokeLinecap='round' strokeLinejoin='round' d='M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5' />
+	</svg>
+);
+
+const parseInitialRange = (r) => {
+	if (!r) return undefined;
+	const from = r.start && isValid(parseISO(r.start)) ? parseISO(r.start) : undefined;
+	const to = r.end && isValid(parseISO(r.end)) ? parseISO(r.end) : undefined;
+	if (!from && !to) return undefined;
+	return { from, to };
+};
+
 const DateRangePicker = ({ onUpdate, initialRange }) => {
-	const [range, setRange] = useState(initialRange);
+	const [range, setRange] = useState(() => parseInitialRange(initialRange));
+	const [fromInput, setFromInput] = useState('');
+	const [toInput, setToInput] = useState('');
 	const [isOpen, setIsOpen] = useState(false);
 	const popoverRef = useRef(null);
 
@@ -55,31 +71,68 @@ const DateRangePicker = ({ onUpdate, initialRange }) => {
 			document.removeEventListener('mousedown', handleClickOutside);
 	}, []);
 
+	useEffect(() => {
+		if (isOpen) setRange((prev) => prev ?? parseInitialRange(initialRange));
+	}, [isOpen, initialRange?.start, initialRange?.end]);
+
+	useEffect(() => {
+		if (range?.from) setFromInput(format(range.from, 'MMM d, yyyy'));
+		else setFromInput('');
+		if (range?.to) setToInput(format(range.to, 'MMM d, yyyy'));
+		else setToInput('');
+	}, [range?.from, range?.to]);
+
 	const handleSelect = (selectedRange) => {
 		setRange(selectedRange);
+	};
+
+	const tryParseDate = (str) => {
+		if (!str || !str.trim()) return null;
+		const s = str.trim();
+		const iso = parseISO(s);
+		if (isValid(iso)) return iso;
+		const parsed = parse(s, 'MMM d, yyyy', new Date());
+		if (isValid(parsed)) return parsed;
+		const parsed2 = parse(s, 'M/d/yyyy', new Date());
+		if (isValid(parsed2)) return parsed2;
+		return null;
+	};
+
+	const handleFromBlur = () => {
+		const d = tryParseDate(fromInput);
+		if (d) setRange((prev) => ({ from: d, to: prev?.to ?? undefined }));
+	};
+
+	const handleToBlur = () => {
+		const d = tryParseDate(toInput);
+		if (d) setRange((prev) => ({ from: prev?.from ?? d, to: d }));
+	};
+
+	const handleConfirm = (e) => {
+		e.stopPropagation();
 		onUpdate({
-			start: selectedRange?.from
-				? format(selectedRange.from, 'yyyy-MM-dd')
-				: '',
-			end: selectedRange?.to
-				? format(selectedRange.to, 'yyyy-MM-dd')
-				: '',
+			start: range?.from ? format(range.from, 'yyyy-MM-dd') : '',
+			end: range?.to ? format(range.to, 'yyyy-MM-dd') : '',
 		});
-		if (selectedRange?.from && selectedRange?.to) {
-			setIsOpen(false);
-		}
+		setIsOpen(false);
+	};
+
+	const handleClear = (e) => {
+		e.stopPropagation();
+		setRange(undefined);
+		onUpdate({ start: '', end: '' });
+		setIsOpen(false);
 	};
 
 	const displayDateRange = () => {
 		if (range?.from) {
-			if (!range.to) return `From ${format(range.from, 'MMM d')}`;
-			return `${format(range.from, 'MMM d')} - ${format(
-				range.to,
-				'MMM d'
-			)}`;
+			if (!range.to) return `${format(range.from, 'MMM d')} – …`;
+			return `${format(range.from, 'MMM d')} – ${format(range.to, 'MMM d')}`;
 		}
-		return 'Select Date';
+		return 'Dates';
 	};
+
+	const hasRange = range?.from != null;
 
 	return (
 		<div
@@ -87,32 +140,90 @@ const DateRangePicker = ({ onUpdate, initialRange }) => {
 			ref={popoverRef}
 		>
 			<button
+				type='button'
 				onClick={() => setIsOpen((prev) => !prev)}
-				className='w-full bg-white border border-stone-200/80 text-stone-700 text-sm font-semibold rounded-full py-2 px-4 hover:bg-stone-100 transition-colors h-10 flex items-center justify-between cursor-pointer'
+				className='min-w-[140px] bg-white border border-stone-200/80 text-stone-700 text-sm font-semibold rounded-full py-2 px-4 hover:bg-stone-50 hover:border-stone-300 transition-colors h-10 flex items-center justify-between gap-2 cursor-pointer shadow-sm'
 			>
+				<CalendarIcon />
 				<span className='truncate'>{displayDateRange()}</span>
 				<ChevronDownIcon />
 			</button>
 			{isOpen && (
-				<div className='absolute top-full mt-1 bg-white border border-stone-200 rounded-lg shadow-xl z-20 p-2'>
+				<div className='absolute top-full left-0 mt-2 bg-white border border-stone-200 rounded-2xl shadow-xl z-20 p-4 w-[min(320px,90vw)]'>
+					<div className='flex items-center justify-between mb-3'>
+						<span className='text-sm font-semibold text-stone-800'>Select range</span>
+						{hasRange && (
+							<button
+								type='button'
+								onClick={handleClear}
+								className='text-xs font-medium text-stone-500 hover:text-amber-600 transition-colors'
+							>
+								Clear
+							</button>
+						)}
+					</div>
+					<div className='grid grid-cols-2 gap-2 mb-3'>
+						<div>
+							<label className='block text-[10px] font-medium text-stone-500 mb-1'>From</label>
+							<input
+								type='text'
+								placeholder='e.g. Mar 1, 2025'
+								className='w-full rounded-lg border border-stone-200 px-2.5 py-1.5 text-sm text-stone-800 placeholder:text-stone-400 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 focus:outline-none'
+								value={fromInput}
+								onChange={(e) => setFromInput(e.target.value)}
+								onBlur={handleFromBlur}
+							/>
+						</div>
+						<div>
+							<label className='block text-[10px] font-medium text-stone-500 mb-1'>To</label>
+							<input
+								type='text'
+								placeholder='e.g. Mar 15, 2025'
+								className='w-full rounded-lg border border-stone-200 px-2.5 py-1.5 text-sm text-stone-800 placeholder:text-stone-400 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 focus:outline-none'
+								value={toInput}
+								onChange={(e) => setToInput(e.target.value)}
+								onBlur={handleToBlur}
+							/>
+						</div>
+					</div>
 					<DayPicker
 						mode='range'
 						selected={range}
 						onSelect={handleSelect}
 						showOutsideDays
 						classNames={{
-							root: 'text-sm',
-							caption:
-								'flex justify-center py-2 mb-2 relative items-center',
-							caption_label: 'font-semibold',
-							nav_button_previous: 'absolute left-1',
-							nav_button_next: 'absolute right-1',
-							day_today: 'text-amber-600 font-bold',
-							day_selected:
-								'bg-amber-600 text-white rounded-full',
-							day_range_middle: 'bg-amber-100 text-amber-900',
+							root: 'rdp-root text-stone-800',
+							months: 'flex justify-center',
+							month: 'space-y-3',
+							month_caption: 'relative flex justify-center items-center gap-2 h-9',
+							caption_label: 'text-sm font-semibold text-stone-800',
+							nav: 'flex items-center gap-1',
+							button_previous: 'absolute left-0 h-8 w-8 rounded-full flex items-center justify-center text-stone-500 hover:bg-stone-100 hover:text-stone-700 transition-colors',
+							button_next: 'absolute right-0 h-8 w-8 rounded-full flex items-center justify-center text-stone-500 hover:bg-stone-100 hover:text-stone-700 transition-colors',
+							month_grid: 'w-full border-collapse',
+							weekdays: 'flex',
+							weekday: 'text-stone-500 text-xs font-medium w-9 flex items-center justify-center',
+							week: 'flex w-full',
+							day: 'w-9 h-9 p-0 text-sm',
+							day_button: 'h-9 w-9 rounded-full flex items-center justify-center font-medium hover:bg-stone-100 transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:ring-offset-2',
+							selected: '!bg-amber-600 !text-white hover:!bg-amber-700',
+							today: 'text-amber-600 font-semibold',
+							outside: 'text-stone-300',
+							disabled: 'text-stone-300 cursor-not-allowed hover:bg-transparent',
+							range_start: '!bg-amber-600 !text-white rounded-l-full',
+							range_end: '!bg-amber-600 !text-white rounded-r-full',
+							range_middle: '!bg-amber-100 !text-amber-900',
 						}}
 					/>
+					<div className='flex justify-end gap-2 mt-3 pt-3 border-t border-stone-100'>
+						<button
+							type='button'
+							onClick={handleConfirm}
+							className='px-4 py-2 text-sm font-semibold rounded-full bg-amber-600 text-white hover:bg-amber-700 transition-colors'
+						>
+							Confirm
+						</button>
+					</div>
 				</div>
 			)}
 		</div>

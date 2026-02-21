@@ -4,7 +4,9 @@ import React, {
 	useContext,
 	useEffect,
 	useCallback,
+	useRef,
 } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { jwtDecode } from 'jwt-decode';
 
 // --- INLINED DEPENDENCIES TO PREVENT BUILD ERRORS ---
@@ -54,6 +56,41 @@ export const apiGetInsights = async (filters, token) => {
 		}
 	);
 
+	return handleResponse(response);
+};
+
+export const apiGetBundles = async (filters, token) => {
+	const params = new URLSearchParams();
+	if (filters.page) params.append('page', filters.page);
+	if (filters.limit) params.append('limit', filters.limit);
+	if (filters.type && filters.type !== 'all')
+		params.append('type', filters.type);
+	if (filters.tags && filters.tags.length > 0) {
+		params.append('tags', filters.tags.join(','));
+	}
+	if (filters.dateRange?.start)
+		params.append('startDate', filters.dateRange.start);
+	if (filters.dateRange?.end) params.append('endDate', filters.dateRange.end);
+	if (filters.sortBy) params.append('sortBy', filters.sortBy);
+	if (filters.sortOrder) params.append('sortOrder', filters.sortOrder);
+
+	const headers = { 'Content-Type': 'application/json' };
+	if (token) headers['Authorization'] = `Bearer ${token}`;
+
+	const response = await fetch(
+		`${API_BASE_URL}/bundles?${params.toString()}`,
+		{ method: 'GET', headers }
+	);
+	return handleResponse(response);
+};
+
+export const apiGetBundleById = async (id, token) => {
+	const headers = { 'Content-Type': 'application/json' };
+	if (token) headers['Authorization'] = `Bearer ${token}`;
+	const response = await fetch(`${API_BASE_URL}/bundles/${id}`, {
+		method: 'GET',
+		headers,
+	});
 	return handleResponse(response);
 };
 
@@ -123,18 +160,47 @@ function debounce(func, wait) {
 
 export const useInsights = (initialConfig = {}) => {
 	const { token } = useAuth() || {};
+	const [searchParams, setSearchParams] = useSearchParams();
 	const [insights, setInsights] = useState([]);
 	const [allTags, setAllTags] = useState(['all']);
 	const [isLoading, setIsLoading] = useState(true);
 	const [error, setError] = useState(null);
 
-	const [page, setPage] = useState(1);
-	const [totalCount, setTotalCount] = useState(0);
-
-	const [sort, setSort] = useState({ sortBy: 'date', sortOrder: 'desc' });
+	const isListPage = !initialConfig.limit;
+	const rawUrlPage = Math.max(1, parseInt(searchParams.get('page') || '1', 10) || 1);
+	const [internalPage, setInternalPage] = useState(1);
+	const setPage = isListPage
+		? (newPage) => {
+				setSearchParams((prev) => {
+					const next = new URLSearchParams(prev);
+					next.set('page', String(Math.max(1, newPage)));
+					return next;
+				});
+		  }
+		: setInternalPage;
 
 	const limit = initialConfig.limit || 20;
+	const [totalCount, setTotalCount] = useState(0);
 	const totalPages = Math.ceil(totalCount / limit);
+	// Clamp URL page to valid range once we know totalPages (list page only)
+	const urlPageClamped =
+		totalPages > 0 && rawUrlPage > totalPages ? totalPages : rawUrlPage;
+	const page = isListPage ? urlPageClamped : internalPage;
+
+	// Sync URL when it was out of range so ?page=999 becomes ?page=N
+	useEffect(() => {
+		if (!isListPage || totalPages <= 0 || rawUrlPage <= totalPages) return;
+		setSearchParams((prev) => {
+			const next = new URLSearchParams(prev);
+			next.set('page', String(totalPages));
+			return next;
+		});
+	}, [isListPage, totalPages, rawUrlPage, setSearchParams]);
+
+	const fetchIdRef = useRef(0);
+	const prevFiltersSortRef = useRef(null);
+
+	const [sort, setSort] = useState({ sortBy: 'date', sortOrder: 'desc' });
 
 	const [filters, setFilters] = useState({
 		type: 'all',
@@ -144,6 +210,7 @@ export const useInsights = (initialConfig = {}) => {
 
 	const fetchInsights = useCallback(
 		async (currentFilters, currentPage, currentSort) => {
+			const id = ++fetchIdRef.current;
 			setIsLoading(true);
 			setError(null);
 
@@ -155,14 +222,14 @@ export const useInsights = (initialConfig = {}) => {
 					sortBy: currentSort.sortBy,
 					sortOrder: currentSort.sortOrder,
 				};
-				const response = await apiGetInsights(queryFilters, token);
+				const response = await apiGetBundles(queryFilters, token);
 
-				// FIX: Correctly handle the API response object
+				if (id !== fetchIdRef.current) return;
+
 				const fetchedData = response.data || [];
-				const total = response.total || 0;
+				const total = response.total ?? 0;
 
 				setTotalCount(total);
-
 				let processedData = fetchedData.map((item) => ({
 					...item,
 					text: item.textSummary,
@@ -186,12 +253,13 @@ export const useInsights = (initialConfig = {}) => {
 					).sort(),
 				]);
 			} catch (err) {
+				if (id !== fetchIdRef.current) return;
 				setError(err);
 			} finally {
-				setIsLoading(false);
+				if (id === fetchIdRef.current) setIsLoading(false);
 			}
 		},
-		[token, limit, initialConfig.limit]
+		[token, limit, initialConfig.limit, isListPage]
 	);
 
 	const debouncedFetch = useCallback(debounce(fetchInsights, 300), [
@@ -199,17 +267,17 @@ export const useInsights = (initialConfig = {}) => {
 	]);
 
 	useEffect(() => {
-		if (page !== 1 && !initialConfig.limit) {
+		if (!isListPage) return;
+		const key = JSON.stringify({ filters, sort });
+		if (prevFiltersSortRef.current !== null && prevFiltersSortRef.current !== key) {
 			setPage(1);
 		}
-		debouncedFetch(filters, page, sort);
-	}, [filters, sort, debouncedFetch]);
+		prevFiltersSortRef.current = key;
+	}, [filters, sort]);
 
 	useEffect(() => {
-		if (!initialConfig.limit) {
-			debouncedFetch(filters, page, sort);
-		}
-	}, [page]);
+		debouncedFetch(filters, page, sort);
+	}, [page, filters, sort, debouncedFetch]);
 
 	return {
 		insights,
