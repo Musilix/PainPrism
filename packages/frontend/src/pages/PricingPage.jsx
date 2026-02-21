@@ -83,15 +83,14 @@ const PricingPage = () => {
 							plan={plans[0]}
 							isClickable={!isLoggedIn}
 							isSelected={isLoggedIn && !isProUser}
+							isGrayedOut={isLoggedIn && !isProUser}
 							size='large'
 						/>
 						<PlanCard
 							plan={plans[1]}
 							isClickable={true}
-							// For a free user, Pro is the selected upgrade path
-							isSelected={
-								!isLoggedIn || (isLoggedIn && !isProUser)
-							}
+							isSelected={!isLoggedIn || (isLoggedIn && !isProUser)}
+							ctaTo={isLoggedIn ? '/checkout' : undefined}
 							size='large'
 						/>
 					</div>
