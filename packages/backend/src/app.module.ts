@@ -7,6 +7,7 @@ import { ConfigModule } from '@nestjs/config';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { ClustersModule } from './clusters/clusters.module';
+import { BundlesModule } from './bundles/bundles.module';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler'; // Import the new modules
 import { APP_GUARD } from '@nestjs/core'; // Import APP_GUARD
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
@@ -29,6 +30,7 @@ import { RolesGuard } from './auth/roles.guard';
 		AuthModule,
 		UsersModule,
 		ClustersModule,
+		BundlesModule,
 	],
 	controllers: [AppController],
 	providers: [
