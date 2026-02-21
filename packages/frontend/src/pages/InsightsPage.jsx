@@ -1,13 +1,11 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
 import InsightsTable from '../components/InsightsTable.jsx';
 import Pagination from '../components/Pagination.jsx';
 import { useInsights } from '../hooks/useInsights.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
-import { SparkleIcon } from '../components/Icons.jsx';
 
 const InsightsPage = () => {
-	const { isLoggedIn } = useAuth();
+	const { isProUser } = useAuth();
 	const {
 		insights,
 		filters,
@@ -18,15 +16,17 @@ const InsightsPage = () => {
 		page,
 		setPage,
 		totalPages,
+		totalCount,
 	} = useInsights();
 
-	const GUEST_PAGE_LIMIT = 3;
-	const effectiveTotalPages = isLoggedIn
-		? totalPages
-		: Math.min(totalPages, GUEST_PAGE_LIMIT);
+	const PAGE_LIMIT_FREE = 3;
+	const showUpgradePrompt =
+		!isProUser &&
+		page > PAGE_LIMIT_FREE &&
+		totalCount > 0 &&
+		insights.length === 0;
 
 	const handlePageChange = (newPage) => {
-		if (!isLoggedIn && newPage > GUEST_PAGE_LIMIT) return;
 		setPage(newPage);
 	};
 
@@ -65,37 +65,16 @@ const InsightsPage = () => {
 										filters={filters}
 										setFilters={setFilters}
 										allTags={allTags}
+										showUpgradePrompt={showUpgradePrompt}
 									/>
 									<Pagination
 										currentPage={page}
-										totalPages={effectiveTotalPages}
+										totalPages={totalPages}
 										onPageChange={handlePageChange}
+										nextDisabled={!isProUser && page > PAGE_LIMIT_FREE}
 									/>
 								</div>
 							)}
-							{!isLoggedIn &&
-								page >= GUEST_PAGE_LIMIT &&
-								totalPages > GUEST_PAGE_LIMIT && (
-									<div className='mt-8 text-center p-8 bg-gradient-to-br from-amber-50 via-white to-violet-50 border border-stone-200 rounded-2xl shadow-lg'>
-										<div className='flex justify-center align-center items-center mx-auto w-12 h-12 bg-amber-100 rounded-full border-4 border-white'>
-											<SparkleIcon className='h-6 w-6 text-amber-600' />
-										</div>
-										<h3 className='mt-4 text-xl font-bold text-stone-800'>
-											Unlock the Full Feed
-										</h3>
-										<p className='mt-2 text-stone-600 max-w-md mx-auto'>
-											You've reached the end of the public
-											preview. Create a free account to
-											browse all insights.
-										</p>
-										<Link
-											to='/register'
-											className='mt-6 inline-block bg-amber-600 text-white font-semibold px-6 py-2 rounded-full hover:bg-amber-700 transition-colors shadow-md hover:shadow-lg'
-										>
-											Sign Up - It's Free
-										</Link>
-									</div>
-								)}
 						</div>
 					</div>
 				</div>

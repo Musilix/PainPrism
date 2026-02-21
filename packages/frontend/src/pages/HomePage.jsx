@@ -46,9 +46,32 @@ const HomePage = () => {
 
 			<div className='w-full'>
 				{isLoading && (
-					<div className='text-center py-10'>
-						<p>Loading insights...</p>
-					</div>
+					<>
+						<p className='text-center text-sm text-stone-400 mb-6'>
+							Loading insights…
+						</p>
+						<div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'>
+						{[1, 2, 3, 4, 5, 6].map((i) => (
+							<div
+								key={i}
+								className='bg-white border border-stone-200/80 rounded-2xl shadow-md overflow-hidden animate-pulse'
+							>
+								<div className='p-4 sm:p-5 border-b border-stone-100'>
+									<div className='h-5 bg-stone-200 rounded w-3/4 mb-3' />
+									<div className='h-6 bg-stone-100 rounded-full w-28' />
+								</div>
+								<div className='p-4 sm:p-5 space-y-2'>
+									<div className='h-3 bg-stone-100 rounded w-full' />
+									<div className='h-3 bg-stone-100 rounded w-full' />
+									<div className='h-3 bg-stone-100 rounded w-5/6' />
+								</div>
+								<div className='p-4 sm:p-5 bg-stone-50/70 border-t border-stone-100'>
+									<div className='h-3 bg-amber-100/60 rounded w-24' />
+								</div>
+							</div>
+						))}
+						</div>
+					</>
 				)}
 				{error && (
 					<div className='text-center py-10 text-red-500'>

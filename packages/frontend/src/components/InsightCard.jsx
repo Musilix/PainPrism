@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 
 // --- INLINED DEPENDENCIES TO FIX BUILD ERROR ---
 
@@ -74,96 +75,68 @@ const Tag = ({ children }) => (
 );
 
 const InsightCard = ({ insight, size = 'large' }) => {
+	const navigate = useNavigate();
 	const style = typeStyles[insight.type] || {};
 	const { Icon } = style;
 
-	let sourceUrl = '#';
-	if (insight.sourceCommentId) {
-		sourceUrl = `https://news.ycombinator.com/item?id=${insight.sourceCommentId}`; //TODO - remove in the future
-	}
+	const title = insight.subject_name || 'Insight';
+	const description = insight.subject_description || insight.text || '';
+	const detailPath = `/insights/${insight.id}`;
 
 	const handleClick = (e) => {
 		e.preventDefault();
 		e.stopPropagation();
-		if (sourceUrl && sourceUrl !== '#') {
-			window.open(sourceUrl, '_blank', 'noopener,noreferrer');
-		}
+		navigate(detailPath);
 	};
+
+	const cardContent = (
+		<>
+			<div className='p-4 sm:p-5 border-b border-stone-100'>
+				<h3 className='text-lg font-semibold text-stone-900 mb-2'>
+					{title}
+				</h3>
+				<div
+					className={`inline-flex items-center px-2.5 py-1 text-xs font-semibold rounded-full ${style.bgColor} ${style.textColor}`}
+				>
+					{Icon && <Icon />}
+					{style.label}
+				</div>
+			</div>
+			<div className='p-4 sm:p-5 flex-grow'>
+				<p className='text-stone-700 text-sm leading-relaxed line-clamp-4'>
+					{description}
+				</p>
+			</div>
+			<div className='p-4 sm:p-5 bg-stone-50/70 rounded-b-2xl border-t border-stone-100 text-xs text-stone-500 group-hover:text-amber-600 transition-colors font-medium'>
+				View details
+				<span className='ml-1 opacity-0 group-hover:opacity-100 transition-opacity'>→</span>
+			</div>
+		</>
+	);
 
 	if (size === 'medium') {
 		return (
 			<div
 				onClick={handleClick}
+				role='button'
+				tabIndex={0}
+				onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleClick(e); } }}
 				className='bg-white border border-stone-200/80 rounded-2xl shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col h-full cursor-pointer group'
 			>
-				{/* Header Section */}
-				<div className='p-4 border-b border-stone-200'>
-					<div className='flex justify-between items-center'>
-						<div
-							className={`inline-flex items-center px-2.5 py-1 text-xs font-semibold rounded-full ${style.bgColor} ${style.textColor}`}
-						>
-							{Icon && <Icon />}
-							{style.label}
-						</div>
-						<span className='text-xs text-stone-400 font-medium'>
-							{formatDate(insight.date)}
-						</span>
-					</div>
-				</div>
-				{/* Body Section - Smaller text and adjusted line clamp */}
-				<p className='p-4 text-stone-700 text-sm leading-relaxed flex-grow line-clamp-5'>
-					{insight.text}
-				</p>
-				{/* Footer Section */}
-				<div className='p-4 bg-stone-100 rounded-b-2xl border-t border-stone-100 text-xs text-stone-500 group-hover:text-amber-600 transition-colors font-medium truncate'>
-					Source: {insight.subject_name || 'Hacker News Thread'}
-					<span className='ml-1 opacity-0 group-hover:opacity-100 transition-opacity'>
-						→
-					</span>
-				</div>
+				{cardContent}
 			</div>
 		);
 	}
 
-	// Large card for any other potential use
 	return (
 		<div
 			onClick={handleClick}
+			role='button'
+			tabIndex={0}
+			onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleClick(e); } }}
 			className='bg-white border border-stone-200/80 rounded-2xl shadow-md hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 flex flex-col h-full cursor-pointer group'
 		>
-			<div className='p-6 border-b border-stone-100'>
-				<div className='flex justify-between items-center'>
-					<div
-						className={`inline-flex items-center px-3 py-1 text-sm font-semibold rounded-full ${style.bgColor} ${style.textColor}`}
-					>
-						{Icon && <Icon />}
-						{style.label}
-					</div>
-					<span className='text-xs text-stone-500 font-medium'>
-						{formatDate(insight.date)}
-					</span>
-				</div>
-			</div>
-			<div className='p-6 flex-grow'>
-				<p className='text-stone-800 text-lg leading-relaxed font-serif'>
-					{insight.text}
-				</p>
-			</div>
-			<div className='p-6 bg-stone-50/70 rounded-b-2xl border-t border-stone-100'>
-				{insight.tags && (
-					<div className='mb-2'>
-						{insight.tags.map((tag) => (
-							<Tag key={tag}>{tag}</Tag>
-						))}
-					</div>
-				)}
-				<div className='text-xs text-stone-500 group-hover:text-amber-700 transition-colors font-medium'>
-					Source: {insight.subject_name || 'Hacker News Thread'}
-					<span className='ml-1 opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all duration-200 inline-block'>
-						→
-					</span>
-				</div>
-			</div>
+			{cardContent}
 		</div>
 	);
 };

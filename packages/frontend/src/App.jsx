@@ -5,8 +5,10 @@ import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import PricingPage from './pages/PricingPage';
+import CheckoutPage from './pages/CheckoutPage';
 import ProfilePage from './pages/ProfilePage';
-import InsightsPage from './pages/InsightsPage'; // <-- Import new page
+import InsightsPage from './pages/InsightsPage';
+import InsightDetailPage from './pages/InsightDetailPage';
 import NotFoundPage from './pages/NotFoundPage';
 
 export default function App() {
@@ -23,6 +25,10 @@ export default function App() {
 						element={<InsightsPage />}
 					/>
 					<Route
+						path='/insights/:id'
+						element={<InsightDetailPage />}
+					/>
+					<Route
 						path='/login'
 						element={<LoginPage />}
 					/>
@@ -33,6 +39,10 @@ export default function App() {
 					<Route
 						path='/pricing'
 						element={<PricingPage />}
+					/>
+					<Route
+						path='/checkout'
+						element={<CheckoutPage />}
 					/>
 					<Route
 						path='/profile'

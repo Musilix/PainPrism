@@ -7,6 +7,8 @@ const PlanCard = ({
 	isSelected,
 	onSelect,
 	isClickable = false,
+	isGrayedOut = false,
+	ctaTo,
 	size = 'large',
 }) => {
 	const navigate = useNavigate();
@@ -15,8 +17,9 @@ const PlanCard = ({
 		if (onSelect) {
 			onSelect(plan.name.toLowerCase());
 		}
-		if (isClickable) {
-			navigate(`/register?plan=${plan.name.toLowerCase()}`);
+		if (isClickable && !isGrayedOut) {
+			const destination = ctaTo || `/register?plan=${plan.name.toLowerCase()}`;
+			navigate(destination);
 		}
 	};
 
@@ -66,14 +69,21 @@ const PlanCard = ({
 		<div
 			onClick={handleCardClick}
 			className={`group relative flex flex-col p-8 rounded-2xl border-2 w-full max-w-sm transition-all duration-300 overflow-hidden bg-white ${
-				isClickable ? 'cursor-pointer hover:shadow-2xl hover:-translate-y-1' : ''
-			} ${isSelected ? (plan.featured ? 'border-violet-400' : 'border-amber-500') : 'border-stone-200'}`}
+				isGrayedOut
+					? 'opacity-70 cursor-default border-stone-200'
+					: isClickable
+						? 'cursor-pointer hover:shadow-2xl hover:-translate-y-1'
+						: ''
+			} ${!isGrayedOut && isSelected ? (plan.featured ? 'border-violet-400' : 'border-amber-500') : isGrayedOut ? '' : 'border-stone-200'}`}
 		>
-			{plan.featured && (
+			{isGrayedOut && (
+				<div className='absolute top-4 right-4 rounded-full bg-stone-200 px-3 py-1 text-xs font-semibold text-stone-600'>
+					Current plan
+				</div>
+			)}
+			{plan.featured && !isGrayedOut && (
 				<>
-					{/* Permanent Gradient */}
 					<div className='absolute inset-0 bg-gradient-to-br from-violet-50 via-white to-amber-50 -z-10' />
-					{/* Hover Glow */}
 					<div className='absolute -inset-4 bg-gradient-to-br from-violet-600 to-amber-500 rounded-3xl opacity-0 group-hover:opacity-20 transition-opacity duration-300 blur-2xl -z-10' />
 				</>
 			)}
